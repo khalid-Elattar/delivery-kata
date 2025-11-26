@@ -1,3 +1,93 @@
 spring:
   application:
     name: delivery
+
+  # R2DBC PostgreSQL
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/delivery
+    username: delivery
+    password: delivery
+    pool:
+      initial-size: 10
+      max-size: 50
+      max-idle-time: 30m
+
+  # Redis
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      timeout: 2000ms
+
+  # Kafka
+  kafka:
+    bootstrap-servers: localhost:29092
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: >
+          slot-created:com.crafteam.delivery.domain.event.SlotCreatedEvent,
+          slot-booked:com.crafteam.delivery.domain.event.SlotBookedEvent,
+          booking-confirmed:com.crafteam.delivery.domain.event.BookingConfirmedEvent,
+          booking-cancelled:com.crafteam.delivery.domain.event.BookingCancelledEvent
+    consumer:
+      group-id: delivery-group
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.crafteam.delivery.domain.event
+
+# Server
+server:
+  port: 8080
+
+# OpenAPI / Swagger
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    operationsSorter: method
+    tagsSorter: alpha
+  show-actuator: true
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+# Logging
+logging:
+  level:
+    com.crafteam.delivery: DEBUG
+    org.springframework.r2dbc: DEBUG
+    org.springframework.kafka: INFO
+    org.springframework.security: DEBUG
+
+# Custom properties
+delivery:
+  slots:
+    default-capacity: 10
+    drive:
+      start-time: "08:00"
+      end-time: "20:00"
+      slot-duration: 60
+    delivery:
+      start-time: "09:00"
+      end-time: "21:00"
+      slot-duration: 120
+    delivery-today:
+      start-time: "10:00"
+      end-time: "22:00"
+      slot-duration: 60
+    delivery-asap:
+      start-time: "08:00"
+      end-time: "23:00"
+      slot-duration: 30
