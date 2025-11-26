@@ -1,13 +1,13 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.CancelBookingCommand;
 import com.crafteam.delivery.application.port.in.BookSlotUseCase;
 import com.crafteam.delivery.application.port.in.CancelBookingUseCase;
 import com.crafteam.delivery.application.port.in.GetBookingUseCase;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.BookSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.BookingResponse;
-import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.BookingModelAssembler;
-import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.BookingWebMapper;
+import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
+import com.crafteam.delivery.interfaces.rest.hateoas.BookingModelAssembler;
+import com.crafteam.delivery.interfaces.rest.mapper.BookingWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;

@@ -1,4 +1,4 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.dto.request;
+package com.crafteam.delivery.interfaces.rest.dto.request;
 
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import jakarta.validation.constraints.Min;

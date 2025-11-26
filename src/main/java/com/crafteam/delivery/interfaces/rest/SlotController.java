@@ -1,12 +1,12 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.port.in.CreateSlotUseCase;
 import com.crafteam.delivery.application.port.in.GetAvailableSlotsUseCase;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.SlotResponse;
-import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.SlotModelAssembler;
-import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.SlotWebMapper;
+import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.SlotResponse;
+import com.crafteam.delivery.interfaces.rest.hateoas.SlotModelAssembler;
+import com.crafteam.delivery.interfaces.rest.mapper.SlotWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

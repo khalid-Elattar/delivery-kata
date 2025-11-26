@@ -1,10 +1,10 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.BookSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.BookingResponse;
-import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.BookingWebMapper;
+import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
+import com.crafteam.delivery.interfaces.rest.mapper.BookingWebMapper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 

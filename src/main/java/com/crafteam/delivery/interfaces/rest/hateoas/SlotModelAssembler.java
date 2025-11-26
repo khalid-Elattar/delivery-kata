@@ -1,7 +1,7 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.hateoas;
+package com.crafteam.delivery.interfaces.rest.hateoas;
 
-import com.crafteam.delivery.infrastructure.adapter.in.web.SlotController;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.SlotResponse;
+import com.crafteam.delivery.interfaces.rest.SlotController;
+import com.crafteam.delivery.interfaces.rest.dto.response.SlotResponse;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.reactive.ReactiveRepresentationModelAssembler;
 import org.springframework.stereotype.Component;

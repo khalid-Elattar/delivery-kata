@@ -1,4 +1,4 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.dto.request;
+package com.crafteam.delivery.interfaces.rest.dto.request;
 
 import jakarta.validation.constraints.NotBlank;
 

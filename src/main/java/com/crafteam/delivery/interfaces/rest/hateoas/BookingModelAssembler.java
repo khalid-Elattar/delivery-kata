@@ -1,7 +1,7 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.hateoas;
+package com.crafteam.delivery.interfaces.rest.hateoas;
 
-import com.crafteam.delivery.infrastructure.adapter.in.web.BookingController;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.BookingResponse;
+import com.crafteam.delivery.interfaces.rest.BookingController;
+import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
 import org.springframework.hateoas.EntityModel;
 import org.springframework.hateoas.server.reactive.ReactiveRepresentationModelAssembler;
 import org.springframework.stereotype.Component;

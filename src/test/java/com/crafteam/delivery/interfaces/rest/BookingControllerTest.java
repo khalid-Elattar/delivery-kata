@@ -1,4 +1,4 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.application.dto.command.CancelBookingCommand;
@@ -11,10 +11,9 @@ import com.crafteam.delivery.domain.exception.SlotNotFoundException;
 import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.BookSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.BookingModelAssembler;
+import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
+import com.crafteam.delivery.interfaces.rest.hateoas.BookingModelAssembler;
 import com.crafteam.delivery.infrastructure.config.SecurityConfig;
-import com.crafteam.delivery.infrastructure.exception.GlobalExceptionHandler;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

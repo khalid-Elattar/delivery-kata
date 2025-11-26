@@ -1,12 +1,12 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.mapper;
+package com.crafteam.delivery.interfaces.rest.mapper;
 
 import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.booking.BookingId;
 import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.BookSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.BookingResponse;
+import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

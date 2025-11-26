@@ -1,10 +1,10 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.CreateSlotCommand;
 import com.crafteam.delivery.domain.model.slot.Slot;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.SlotResponse;
-import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.SlotWebMapper;
+import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.SlotResponse;
+import com.crafteam.delivery.interfaces.rest.mapper.SlotWebMapper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 

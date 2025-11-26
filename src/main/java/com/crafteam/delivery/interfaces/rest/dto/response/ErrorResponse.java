@@ -1,4 +1,4 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.dto.response;
+package com.crafteam.delivery.interfaces.rest.dto.response;
 
 import java.time.Instant;
 

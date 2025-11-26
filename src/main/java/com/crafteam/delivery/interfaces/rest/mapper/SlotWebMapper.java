@@ -1,10 +1,10 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web.mapper;
+package com.crafteam.delivery.interfaces.rest.mapper;
 
 import com.crafteam.delivery.application.dto.command.CreateSlotCommand;
 import com.crafteam.delivery.domain.model.slot.Slot;
 import com.crafteam.delivery.domain.model.slot.SlotId;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.SlotResponse;
+import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
+import com.crafteam.delivery.interfaces.rest.dto.response.SlotResponse;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.Named;

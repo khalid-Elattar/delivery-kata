@@ -1,9 +1,9 @@
-package com.crafteam.delivery.infrastructure.exception;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.domain.exception.BookingNotFoundException;
 import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
 import com.crafteam.delivery.domain.exception.SlotNotFoundException;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.ErrorResponse;
+import com.crafteam.delivery.interfaces.rest.dto.response.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;

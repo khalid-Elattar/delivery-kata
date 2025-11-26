@@ -1,4 +1,4 @@
-package com.crafteam.delivery.infrastructure.adapter.in.web;
+package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.CreateSlotCommand;
 import com.crafteam.delivery.application.port.in.CreateSlotUseCase;
@@ -6,9 +6,8 @@ import com.crafteam.delivery.application.port.in.GetAvailableSlotsUseCase;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
 import com.crafteam.delivery.domain.model.slot.TimeSlot;
-import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
-import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.SlotModelAssembler;
-import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.SlotWebMapper;
+import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
+import com.crafteam.delivery.interfaces.rest.hateoas.SlotModelAssembler;
 import com.crafteam.delivery.infrastructure.config.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
