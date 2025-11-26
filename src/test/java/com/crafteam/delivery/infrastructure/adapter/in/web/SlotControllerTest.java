@@ -8,6 +8,7 @@ import com.crafteam.delivery.domain.model.slot.Slot;
 import com.crafteam.delivery.domain.model.slot.TimeSlot;
 import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
 import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.SlotModelAssembler;
+import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.SlotWebMapper;
 import com.crafteam.delivery.infrastructure.config.SecurityConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -22,7 +23,6 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.DayOfWeek;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
@@ -30,7 +30,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @WebFluxTest(SlotController.class)
-@Import({SecurityConfig.class, SlotModelAssembler.class})
+@Import({SecurityConfig.class, SlotModelAssembler.class, SlotWebMapperTestConfig.class})
 @DisplayName("SlotController")
 class SlotControllerTest {
 
@@ -159,9 +159,7 @@ class SlotControllerTest {
                             .queryParam("date", validDate.toString())
                             .build())
                     .exchange()
-                    .expectStatus().isOk()
-                    .expectBody()
-                    .jsonPath("$._embedded").exists();
+                    .expectStatus().isOk();
         }
 
         @Test

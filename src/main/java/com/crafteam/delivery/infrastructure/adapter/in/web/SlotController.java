@@ -1,12 +1,12 @@
 package com.crafteam.delivery.infrastructure.adapter.in.web;
 
-import com.crafteam.delivery.application.dto.command.CreateSlotCommand;
 import com.crafteam.delivery.application.port.in.CreateSlotUseCase;
 import com.crafteam.delivery.application.port.in.GetAvailableSlotsUseCase;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.CreateSlotRequest;
 import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.SlotResponse;
 import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.SlotModelAssembler;
+import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.SlotWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -33,13 +33,16 @@ public class SlotController {
     private final CreateSlotUseCase createSlotUseCase;
     private final GetAvailableSlotsUseCase getAvailableSlotsUseCase;
     private final SlotModelAssembler slotModelAssembler;
+    private final SlotWebMapper slotWebMapper;
 
     public SlotController(CreateSlotUseCase createSlotUseCase,
                           GetAvailableSlotsUseCase getAvailableSlotsUseCase,
-                          SlotModelAssembler slotModelAssembler) {
+                          SlotModelAssembler slotModelAssembler,
+                          SlotWebMapper slotWebMapper) {
         this.createSlotUseCase = createSlotUseCase;
         this.getAvailableSlotsUseCase = getAvailableSlotsUseCase;
         this.slotModelAssembler = slotModelAssembler;
+        this.slotWebMapper = slotWebMapper;
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -51,16 +54,8 @@ public class SlotController {
     @ApiResponse(responseCode = "201", description = "Slot created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request")
     public Mono<EntityModel<SlotResponse>> createSlot(@Valid @RequestBody CreateSlotRequest request) {
-        CreateSlotCommand command = new CreateSlotCommand(
-                request.deliveryMode(),
-                request.date(),
-                request.startTime(),
-                request.endTime(),
-                request.capacity()
-        );
-
-        return createSlotUseCase.execute(command)
-                .map(SlotResponse::from)
+        return createSlotUseCase.execute(slotWebMapper.toCommand(request))
+                .map(slotWebMapper::toResponse)
                 .map(slotModelAssembler::toModel);
     }
 
@@ -77,7 +72,7 @@ public class SlotController {
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date) {
 
         return getAvailableSlotsUseCase.execute(mode, date)
-                .map(SlotResponse::from)
+                .map(slotWebMapper::toResponse)
                 .map(slotModelAssembler::toModel)
                 .collectList()
                 .map(CollectionModel::of);
@@ -87,7 +82,7 @@ public class SlotController {
     @Operation(summary = "Get all slots", description = "Retrieves all delivery slots")
     public Mono<CollectionModel<EntityModel<SlotResponse>>> getAllSlots() {
         return getAvailableSlotsUseCase.executeAll()
-                .map(SlotResponse::from)
+                .map(slotWebMapper::toResponse)
                 .map(slotModelAssembler::toModel)
                 .collectList()
                 .map(CollectionModel::of);

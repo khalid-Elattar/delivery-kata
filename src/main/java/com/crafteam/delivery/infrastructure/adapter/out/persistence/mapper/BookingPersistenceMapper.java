@@ -6,27 +6,28 @@ import com.crafteam.delivery.domain.model.booking.BookingStatus;
 import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
 import com.crafteam.delivery.infrastructure.adapter.out.persistence.entity.BookingEntity;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+
+import java.util.UUID;
 
 /**
- * Mapper for converting between Booking domain objects and BookingEntity persistence objects.
+ * MapStruct mapper for converting between Booking domain objects and BookingEntity persistence objects.
  */
-@Component
-public class BookingPersistenceMapper {
+@Mapper(componentModel = "spring")
+public interface BookingPersistenceMapper {
 
-    public BookingEntity toEntity(Booking booking) {
-        return new BookingEntity(
-                booking.getId().value(),
-                booking.getSlotId().value(),
-                booking.getCustomerId().value(),
-                booking.getStatus().name(),
-                booking.getCreatedAt(),
-                booking.getConfirmedAt(),
-                booking.getCancelledAt()
-        );
-    }
+    @Mapping(target = "id", source = "id", qualifiedByName = "bookingIdToUuid")
+    @Mapping(target = "slotId", source = "slotId", qualifiedByName = "slotIdToUuid")
+    @Mapping(target = "customerId", source = "customerId", qualifiedByName = "customerIdToUuid")
+    @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
+    BookingEntity toEntity(Booking booking);
 
-    public Booking toDomain(BookingEntity entity) {
+    default Booking toDomain(BookingEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         return Booking.reconstitute(
                 BookingId.from(entity.getId()),
                 SlotId.from(entity.getSlotId()),
@@ -36,5 +37,25 @@ public class BookingPersistenceMapper {
                 entity.getConfirmedAt(),
                 entity.getCancelledAt()
         );
+    }
+
+    @Named("bookingIdToUuid")
+    default UUID bookingIdToUuid(BookingId bookingId) {
+        return bookingId != null ? bookingId.value() : null;
+    }
+
+    @Named("slotIdToUuid")
+    default UUID slotIdToUuid(SlotId slotId) {
+        return slotId != null ? slotId.value() : null;
+    }
+
+    @Named("customerIdToUuid")
+    default UUID customerIdToUuid(CustomerId customerId) {
+        return customerId != null ? customerId.value() : null;
+    }
+
+    @Named("statusToString")
+    default String statusToString(BookingStatus status) {
+        return status != null ? status.name() : null;
     }
 }

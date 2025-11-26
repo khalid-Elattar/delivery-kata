@@ -1,6 +1,5 @@
 package com.crafteam.delivery.infrastructure.adapter.in.web;
 
-import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.application.dto.command.CancelBookingCommand;
 import com.crafteam.delivery.application.port.in.BookSlotUseCase;
 import com.crafteam.delivery.application.port.in.CancelBookingUseCase;
@@ -8,6 +7,7 @@ import com.crafteam.delivery.application.port.in.GetBookingUseCase;
 import com.crafteam.delivery.infrastructure.adapter.in.web.dto.request.BookSlotRequest;
 import com.crafteam.delivery.infrastructure.adapter.in.web.dto.response.BookingResponse;
 import com.crafteam.delivery.infrastructure.adapter.in.web.hateoas.BookingModelAssembler;
+import com.crafteam.delivery.infrastructure.adapter.in.web.mapper.BookingWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -31,15 +31,18 @@ public class BookingController {
     private final CancelBookingUseCase cancelBookingUseCase;
     private final GetBookingUseCase getBookingUseCase;
     private final BookingModelAssembler bookingModelAssembler;
+    private final BookingWebMapper bookingWebMapper;
 
     public BookingController(BookSlotUseCase bookSlotUseCase,
                              CancelBookingUseCase cancelBookingUseCase,
                              GetBookingUseCase getBookingUseCase,
-                             BookingModelAssembler bookingModelAssembler) {
+                             BookingModelAssembler bookingModelAssembler,
+                             BookingWebMapper bookingWebMapper) {
         this.bookSlotUseCase = bookSlotUseCase;
         this.cancelBookingUseCase = cancelBookingUseCase;
         this.getBookingUseCase = getBookingUseCase;
         this.bookingModelAssembler = bookingModelAssembler;
+        this.bookingWebMapper = bookingWebMapper;
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -53,10 +56,8 @@ public class BookingController {
     @ApiResponse(responseCode = "404", description = "Slot not found")
     @ApiResponse(responseCode = "409", description = "Slot not available")
     public Mono<EntityModel<BookingResponse>> bookSlot(@Valid @RequestBody BookSlotRequest request) {
-        BookSlotCommand command = new BookSlotCommand(request.slotId(), request.customerId());
-
-        return bookSlotUseCase.execute(command)
-                .map(BookingResponse::from)
+        return bookSlotUseCase.execute(bookingWebMapper.toCommand(request))
+                .map(bookingWebMapper::toResponse)
                 .map(bookingModelAssembler::toModel);
     }
 
@@ -66,7 +67,7 @@ public class BookingController {
     @ApiResponse(responseCode = "404", description = "Booking not found")
     public Mono<EntityModel<BookingResponse>> getBooking(@PathVariable String bookingId) {
         return getBookingUseCase.findById(bookingId)
-                .map(BookingResponse::from)
+                .map(bookingWebMapper::toResponse)
                 .map(bookingModelAssembler::toModel);
     }
 
@@ -75,7 +76,7 @@ public class BookingController {
     public Mono<CollectionModel<EntityModel<BookingResponse>>> getCustomerBookings(
             @PathVariable String customerId) {
         return getBookingUseCase.findByCustomerId(customerId)
-                .map(BookingResponse::from)
+                .map(bookingWebMapper::toResponse)
                 .map(bookingModelAssembler::toModel)
                 .collectList()
                 .map(CollectionModel::of);

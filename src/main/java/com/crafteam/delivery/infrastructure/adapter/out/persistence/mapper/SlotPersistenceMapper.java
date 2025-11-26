@@ -5,27 +5,29 @@ import com.crafteam.delivery.domain.model.slot.Slot;
 import com.crafteam.delivery.domain.model.slot.SlotId;
 import com.crafteam.delivery.domain.model.slot.TimeSlot;
 import com.crafteam.delivery.infrastructure.adapter.out.persistence.entity.SlotEntity;
-import org.springframework.stereotype.Component;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+
+import java.time.LocalTime;
+import java.util.UUID;
 
 /**
- * Mapper for converting between Slot domain objects and SlotEntity persistence objects.
+ * MapStruct mapper for converting between Slot domain objects and SlotEntity persistence objects.
  */
-@Component
-public class SlotPersistenceMapper {
+@Mapper(componentModel = "spring")
+public interface SlotPersistenceMapper {
 
-    public SlotEntity toEntity(Slot slot) {
-        return new SlotEntity(
-                slot.getId().value(),
-                slot.getDeliveryMode().name(),
-                slot.getDate(),
-                slot.getTimeSlot().startTime(),
-                slot.getTimeSlot().endTime(),
-                slot.getCapacity(),
-                slot.getBookedCount()
-        );
-    }
+    @Mapping(target = "id", source = "id", qualifiedByName = "slotIdToUuid")
+    @Mapping(target = "deliveryMode", source = "deliveryMode", qualifiedByName = "deliveryModeToString")
+    @Mapping(target = "startTime", source = "timeSlot.startTime")
+    @Mapping(target = "endTime", source = "timeSlot.endTime")
+    SlotEntity toEntity(Slot slot);
 
-    public Slot toDomain(SlotEntity entity) {
+    default Slot toDomain(SlotEntity entity) {
+        if (entity == null) {
+            return null;
+        }
         return Slot.reconstitute(
                 SlotId.from(entity.getId()),
                 DeliveryMode.valueOf(entity.getDeliveryMode()),
@@ -34,5 +36,15 @@ public class SlotPersistenceMapper {
                 entity.getCapacity(),
                 entity.getBookedCount()
         );
+    }
+
+    @Named("slotIdToUuid")
+    default UUID slotIdToUuid(SlotId slotId) {
+        return slotId != null ? slotId.value() : null;
+    }
+
+    @Named("deliveryModeToString")
+    default String deliveryModeToString(DeliveryMode deliveryMode) {
+        return deliveryMode != null ? deliveryMode.name() : null;
     }
 }

@@ -34,7 +34,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
 @WebFluxTest(BookingController.class)
-@Import({SecurityConfig.class, BookingModelAssembler.class, GlobalExceptionHandler.class})
+@Import({SecurityConfig.class, BookingModelAssembler.class, GlobalExceptionHandler.class, BookingWebMapperTestConfig.class})
 @DisplayName("BookingController")
 class BookingControllerTest {
 
