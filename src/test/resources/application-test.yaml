@@ -1,0 +1,40 @@
+spring:
+  application:
+    name: delivery-test
+
+  # R2DBC - Use testcontainers
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/delivery_test
+    username: test
+    password: test
+
+  # Redis - disable for unit tests
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+  # Kafka - disable auto-configuration for tests
+  kafka:
+    bootstrap-servers: localhost:9092
+    consumer:
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.kafka.KafkaAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration
+
+# Server
+server:
+  port: 0
+
+# Logging
+logging:
+  level:
+    com.crafteam.delivery: DEBUG
+    org.springframework.r2dbc: DEBUG
