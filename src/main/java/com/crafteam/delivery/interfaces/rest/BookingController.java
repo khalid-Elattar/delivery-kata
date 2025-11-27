@@ -13,11 +13,13 @@ import com.crafteam.delivery.interfaces.rest.dto.request.AcceptSuggestionRequest
 import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
 import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
 import com.crafteam.delivery.interfaces.rest.dto.response.BookingResultResponse;
+import com.crafteam.delivery.interfaces.rest.hateoas.BookingModelAssembler;
 import com.crafteam.delivery.interfaces.rest.mapper.BookingWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -39,19 +41,22 @@ public class BookingController {
     private final CancelBookingUseCase cancelBookingUseCase;
     private final GetBookingUseCase getBookingUseCase;
     private final BookingWebMapper bookingWebMapper;
+    private final BookingModelAssembler bookingModelAssembler;
 
     public BookingController(BookSlotUseCase bookSlotUseCase,
                              BookSlotWithSuggestionsUseCase bookSlotWithSuggestionsUseCase,
                              AcceptSuggestionUseCase acceptSuggestionUseCase,
                              CancelBookingUseCase cancelBookingUseCase,
                              GetBookingUseCase getBookingUseCase,
-                             BookingWebMapper bookingWebMapper) {
+                             BookingWebMapper bookingWebMapper,
+                             BookingModelAssembler bookingModelAssembler) {
         this.bookSlotUseCase = bookSlotUseCase;
         this.bookSlotWithSuggestionsUseCase = bookSlotWithSuggestionsUseCase;
         this.acceptSuggestionUseCase = acceptSuggestionUseCase;
         this.cancelBookingUseCase = cancelBookingUseCase;
         this.getBookingUseCase = getBookingUseCase;
         this.bookingWebMapper = bookingWebMapper;
+        this.bookingModelAssembler = bookingModelAssembler;
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -64,9 +69,10 @@ public class BookingController {
     @ApiResponse(responseCode = "400", description = "Invalid request")
     @ApiResponse(responseCode = "404", description = "Slot not found")
     @ApiResponse(responseCode = "409", description = "Slot not available")
-    public Mono<BookingResponse> bookSlot(@Valid @RequestBody BookSlotRequest request) {
+    public Mono<EntityModel<BookingResponse>> bookSlot(@Valid @RequestBody BookSlotRequest request) {
         return bookSlotUseCase.execute(bookingWebMapper.toCommand(request))
-                .map(bookingWebMapper::toResponse);
+                .map(bookingWebMapper::toResponse)
+                .map(bookingModelAssembler::toModel);
     }
 
     @PostMapping(value = "/with-suggestions", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -123,19 +129,21 @@ public class BookingController {
     }
 
     @GetMapping(value = "/{bookingId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get booking by ID", description = "Retrieves a specific booking")
+    @Operation(summary = "Get booking by ID", description = "Retrieves a specific booking with HATEOAS links")
     @ApiResponse(responseCode = "200", description = "Booking found")
     @ApiResponse(responseCode = "404", description = "Booking not found")
-    public Mono<BookingResponse> getBooking(@PathVariable String bookingId) {
+    public Mono<EntityModel<BookingResponse>> getBooking(@PathVariable String bookingId) {
         return getBookingUseCase.findById(bookingId)
-                .map(bookingWebMapper::toResponse);
+                .map(bookingWebMapper::toResponse)
+                .map(bookingModelAssembler::toModel);
     }
 
     @GetMapping(value = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get bookings by user", description = "Retrieves all bookings for a user")
-    public Flux<BookingResponse> getUserBookings(@PathVariable String userId) {
+    @Operation(summary = "Get bookings by user", description = "Retrieves all bookings for a user with HATEOAS links")
+    public Flux<EntityModel<BookingResponse>> getUserBookings(@PathVariable String userId) {
         return getBookingUseCase.findByUserId(userId)
-                .map(bookingWebMapper::toResponse);
+                .map(bookingWebMapper::toResponse)
+                .map(bookingModelAssembler::toModel);
     }
 
     @DeleteMapping("/{bookingId}")

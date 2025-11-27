@@ -46,39 +46,40 @@ public class RegisterUserService implements RegisterUserUseCase {
                         return Mono.error(new EmailAlreadyExistsException(command.email()));
                     }
 
-                    // Encode password
-                    String hashedPassword = passwordEncoder.encode(command.password());
-                    Password password = Password.fromHash(hashedPassword);
+                    // Encode password reactively
+                    return passwordEncoder.encode(command.password())
+                            .map(Password::fromHash)
+                            .flatMap(password -> {
+                                // Create address (may be null/empty)
+                                Address address = Address.of(
+                                        command.street(),
+                                        command.city(),
+                                        command.zipCode(),
+                                        command.country()
+                                );
 
-                    // Create address (may be null/empty)
-                    Address address = Address.of(
-                            command.street(),
-                            command.city(),
-                            command.zipCode(),
-                            command.country()
-                    );
+                                // Create phone number (may be null)
+                                PhoneNumber phoneNumber = command.phoneNumber() != null && !command.phoneNumber().isBlank()
+                                        ? PhoneNumber.from(command.phoneNumber())
+                                        : null;
 
-                    // Create phone number (may be null)
-                    PhoneNumber phoneNumber = command.phoneNumber() != null && !command.phoneNumber().isBlank()
-                            ? PhoneNumber.from(command.phoneNumber())
-                            : null;
+                                // Create user through domain factory method
+                                User user = User.register(
+                                        command.firstName(),
+                                        command.lastName(),
+                                        email,
+                                        password,
+                                        address,
+                                        phoneNumber
+                                );
 
-                    // Create user through domain factory method
-                    User user = User.register(
-                            command.firstName(),
-                            command.lastName(),
-                            email,
-                            password,
-                            address,
-                            phoneNumber
-                    );
-
-                    return userRepository.save(user)
-                            .flatMap(savedUser ->
-                                    eventPublisher.publishAll(user.getDomainEvents())
-                                            .doOnSuccess(v -> user.clearDomainEvents())
-                                            .thenReturn(savedUser)
-                            );
+                                return userRepository.save(user)
+                                        .flatMap(savedUser ->
+                                                eventPublisher.publishAll(user.getDomainEvents())
+                                                        .doOnSuccess(v -> user.clearDomainEvents())
+                                                        .thenReturn(savedUser)
+                                        );
+                            });
                 })
                 .doOnSuccess(user -> log.info("User registered: id={}, email={}", user.getId(), user.getEmail()));
     }

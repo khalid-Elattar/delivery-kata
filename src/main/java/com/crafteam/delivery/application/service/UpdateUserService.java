@@ -81,17 +81,24 @@ public class UpdateUserService implements UpdateUserUseCase {
 
         return userRepository.findById(UserId.from(command.userId()))
                 .switchIfEmpty(Mono.error(new UserNotFoundException(command.userId())))
-                .flatMap(user -> {
-                    if (!passwordEncoder.matches(command.oldPassword(), user.getPassword().hashedValue())) {
-                        log.warn("Password change failed: invalid old password for userId={}", command.userId());
-                        return Mono.error(new InvalidCredentialsException());
-                    }
+                .flatMap(user ->
+                        // Verify old password reactively
+                        passwordEncoder.matches(command.oldPassword(), user.getPassword().hashedValue())
+                                .flatMap(matches -> {
+                                    if (!matches) {
+                                        log.warn("Password change failed: invalid old password for userId={}", command.userId());
+                                        return Mono.error(new InvalidCredentialsException());
+                                    }
 
-                    String hashedPassword = passwordEncoder.encode(command.newPassword());
-                    user.changePassword(Password.fromHash(hashedPassword));
-
-                    return userRepository.save(user);
-                })
+                                    // Encode new password reactively
+                                    return passwordEncoder.encode(command.newPassword())
+                                            .map(Password::fromHash)
+                                            .flatMap(newPassword -> {
+                                                user.changePassword(newPassword);
+                                                return userRepository.save(user);
+                                            });
+                                })
+                )
                 .doOnSuccess(user -> log.info("Password changed: userId={}", user.getId()));
     }
 }

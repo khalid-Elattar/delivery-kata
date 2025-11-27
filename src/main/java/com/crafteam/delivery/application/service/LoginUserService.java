@@ -41,13 +41,17 @@ public class LoginUserService implements LoginUserUseCase {
                         return Mono.error(new InvalidCredentialsException());
                     }
 
-                    if (!passwordEncoder.matches(command.password(), user.getPassword().hashedValue())) {
-                        log.warn("Login failed: invalid password for email={}", command.email());
-                        return Mono.error(new InvalidCredentialsException());
-                    }
+                    // Verify password reactively
+                    return passwordEncoder.matches(command.password(), user.getPassword().hashedValue())
+                            .flatMap(matches -> {
+                                if (!matches) {
+                                    log.warn("Login failed: invalid password for email={}", command.email());
+                                    return Mono.error(new InvalidCredentialsException());
+                                }
 
-                    log.info("Login successful: userId={}, email={}", user.getId(), user.getEmail());
-                    return Mono.just(user);
+                                log.info("Login successful: userId={}, email={}", user.getId(), user.getEmail());
+                                return Mono.just(user);
+                            });
                 });
     }
 }

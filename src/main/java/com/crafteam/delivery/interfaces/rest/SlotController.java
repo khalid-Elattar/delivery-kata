@@ -8,6 +8,7 @@ import com.crafteam.delivery.application.port.in.GetSlotAvailabilityUseCase;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
 import com.crafteam.delivery.interfaces.rest.dto.response.SlotResponse;
+import com.crafteam.delivery.interfaces.rest.hateoas.SlotModelAssembler;
 import com.crafteam.delivery.interfaces.rest.mapper.SlotWebMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -17,6 +18,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -38,15 +40,18 @@ public class SlotController {
     private final GetAvailableSlotsUseCase getAvailableSlotsUseCase;
     private final GetSlotAvailabilityUseCase getSlotAvailabilityUseCase;
     private final SlotWebMapper slotWebMapper;
+    private final SlotModelAssembler slotModelAssembler;
 
     public SlotController(CreateSlotUseCase createSlotUseCase,
                           GetAvailableSlotsUseCase getAvailableSlotsUseCase,
                           GetSlotAvailabilityUseCase getSlotAvailabilityUseCase,
-                          SlotWebMapper slotWebMapper) {
+                          SlotWebMapper slotWebMapper,
+                          SlotModelAssembler slotModelAssembler) {
         this.createSlotUseCase = createSlotUseCase;
         this.getAvailableSlotsUseCase = getAvailableSlotsUseCase;
         this.getSlotAvailabilityUseCase = getSlotAvailabilityUseCase;
         this.slotWebMapper = slotWebMapper;
+        this.slotModelAssembler = slotModelAssembler;
     }
 
     @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -57,9 +62,10 @@ public class SlotController {
     )
     @ApiResponse(responseCode = "201", description = "Slot created successfully")
     @ApiResponse(responseCode = "400", description = "Invalid request")
-    public Mono<SlotResponse> createSlot(@Valid @RequestBody CreateSlotRequest request) {
+    public Mono<EntityModel<SlotResponse>> createSlot(@Valid @RequestBody CreateSlotRequest request) {
         return createSlotUseCase.execute(slotWebMapper.toCommand(request))
-                .map(slotWebMapper::toResponse);
+                .map(slotWebMapper::toResponse)
+                .map(slotModelAssembler::toModel);
     }
 
     @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
@@ -112,9 +118,10 @@ public class SlotController {
     }
 
     @GetMapping(value = "/all", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get all slots", description = "Retrieves all delivery slots")
-    public Flux<SlotResponse> getAllSlots() {
+    @Operation(summary = "Get all slots", description = "Retrieves all delivery slots with HATEOAS links")
+    public Flux<EntityModel<SlotResponse>> getAllSlots() {
         return getAvailableSlotsUseCase.executeAll()
-                .map(slotWebMapper::toResponse);
+                .map(slotWebMapper::toResponse)
+                .map(slotModelAssembler::toModel);
     }
 }
