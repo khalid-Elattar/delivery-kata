@@ -24,7 +24,7 @@ public interface UserPersistenceMapper {
     @Mapping(target = "country", source = "address.country")
     @Mapping(target = "phoneNumber", source = "phoneNumber", qualifiedByName = "phoneToString")
     @Mapping(target = "role", source = "role", qualifiedByName = "roleToString")
-    @Mapping(target = "isNew", constant = "false")
+    @Mapping(target = "isNew", source = "updatedAt", qualifiedByName = "isNewFromUpdatedAt")
     UserEntity toEntity(User user);
 
     default User toDomain(UserEntity entity) {
@@ -81,5 +81,11 @@ public interface UserPersistenceMapper {
     @Named("roleToString")
     default String roleToString(UserRole role) {
         return role != null ? role.name() : null;
+    }
+
+    @Named("isNewFromUpdatedAt")
+    default boolean isNewFromUpdatedAt(java.time.Instant updatedAt) {
+        // If updatedAt is null, this is a new entity that hasn't been persisted yet
+        return updatedAt == null;
     }
 }

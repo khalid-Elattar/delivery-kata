@@ -69,8 +69,6 @@ databaseChangeLog:
               - column:
                   name: updated_at
                   type: timestamp
-        - addCheckConstraint:
-            tableName: users
-            constraintName: chk_role
-            validate: true
-            constraintBody: role IN ('USER', 'ADMIN')
+        - sql:
+            dbms: postgresql
+            sql: ALTER TABLE users ADD CONSTRAINT chk_role CHECK (role IN ('USER', 'ADMIN'))

@@ -12,17 +12,16 @@ spring:
       max-size: 50
       max-idle-time: 30m
 
-  # JDBC DataSource for Liquibase migrations (required for DDL)
-  datasource:
-    url: jdbc:postgresql://localhost:5432/delivery
-    username: postgres
-    password: postgres
-    driver-class-name: org.postgresql.Driver
-
-  # Liquibase configuration
+  # Liquibase configuration (requires explicit JDBC connection for R2DBC apps)
   liquibase:
     enabled: true
     change-log: classpath:db/changelog/db.changelog-master.yaml
+    url: jdbc:postgresql://localhost:5432/delivery
+    user: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+    # drop-first forces Liquibase to drop and recreate all objects - use temporarily for setup
+    drop-first: true
 
   # Redis
   data:
@@ -81,23 +80,46 @@ logging:
   file:
     path: logs
 
-# Custom properties
+# Custom properties - Delivery Business Rules
 delivery:
-  slots:
-    default-capacity: 10
+  booking:
+    max-active-per-user: 3
+    cancellation-deadline-hours: 1
+
+  modes:
     drive:
+      slot-duration: 60  # minutes
       start-time: "08:00"
       end-time: "20:00"
-      slot-duration: 60
+      min-advance-hours: 2
+      max-advance-days: 14
+      default-capacity: 10
+      available-days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY
+
     delivery:
+      slot-duration: 120
       start-time: "09:00"
       end-time: "21:00"
-      slot-duration: 120
+      min-advance-hours: 24
+      max-advance-days: 7
+      default-capacity: 5
+      available-days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY
+
     delivery-today:
+      slot-duration: 60
       start-time: "10:00"
       end-time: "22:00"
-      slot-duration: 60
+      min-advance-hours: 3
+      max-advance-days: 0
+      default-capacity: 3
+      cutoff-time: "19:00"
+      available-days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY
+
     delivery-asap:
+      slot-duration: 30
       start-time: "08:00"
       end-time: "23:00"
-      slot-duration: 30
+      min-advance-minutes: 30
+      max-advance-hours: 4
+      default-capacity: 2
+      available-days: MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY,SATURDAY,SUNDAY

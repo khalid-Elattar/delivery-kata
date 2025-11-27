@@ -2,7 +2,9 @@ package com.crafteam.delivery.interfaces.rest;
 
 import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.application.dto.command.CancelBookingCommand;
+import com.crafteam.delivery.application.port.in.AcceptSuggestionUseCase;
 import com.crafteam.delivery.application.port.in.BookSlotUseCase;
+import com.crafteam.delivery.application.port.in.BookSlotWithSuggestionsUseCase;
 import com.crafteam.delivery.application.port.in.CancelBookingUseCase;
 import com.crafteam.delivery.application.port.in.GetBookingUseCase;
 import com.crafteam.delivery.application.port.out.UserRepository;
@@ -43,6 +45,12 @@ class BookingControllerTest {
 
     @MockBean
     private BookSlotUseCase bookSlotUseCase;
+
+    @MockBean
+    private BookSlotWithSuggestionsUseCase bookSlotWithSuggestionsUseCase;
+
+    @MockBean
+    private AcceptSuggestionUseCase acceptSuggestionUseCase;
 
     @MockBean
     private CancelBookingUseCase cancelBookingUseCase;

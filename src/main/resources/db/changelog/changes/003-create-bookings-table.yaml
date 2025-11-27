@@ -58,8 +58,6 @@ databaseChangeLog:
             constraintName: fk_bookings_user
             onDelete: CASCADE
             onUpdate: CASCADE
-        - addCheckConstraint:
-            tableName: bookings
-            constraintName: chk_status
-            validate: true
-            constraintBody: status IN ('PENDING', 'CONFIRMED', 'CANCELLED')
+        - sql:
+            dbms: postgresql
+            sql: ALTER TABLE bookings ADD CONSTRAINT chk_status CHECK (status IN ('PENDING', 'CONFIRMED', 'CANCELLED'))

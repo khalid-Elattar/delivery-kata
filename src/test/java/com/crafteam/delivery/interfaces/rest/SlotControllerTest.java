@@ -3,6 +3,7 @@ package com.crafteam.delivery.interfaces.rest;
 import com.crafteam.delivery.application.dto.command.CreateSlotCommand;
 import com.crafteam.delivery.application.port.in.CreateSlotUseCase;
 import com.crafteam.delivery.application.port.in.GetAvailableSlotsUseCase;
+import com.crafteam.delivery.application.port.in.GetSlotAvailabilityUseCase;
 import com.crafteam.delivery.application.port.out.UserRepository;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
@@ -42,6 +43,9 @@ class SlotControllerTest {
 
     @MockBean
     private GetAvailableSlotsUseCase getAvailableSlotsUseCase;
+
+    @MockBean
+    private GetSlotAvailabilityUseCase getSlotAvailabilityUseCase;
 
     @MockBean
     private UserRepository userRepository;

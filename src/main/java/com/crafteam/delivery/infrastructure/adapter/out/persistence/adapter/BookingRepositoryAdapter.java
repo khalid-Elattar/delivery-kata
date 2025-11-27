@@ -60,7 +60,14 @@ public class BookingRepositoryAdapter implements BookingRepository {
     @Override
     public Mono<Booking> save(Booking booking) {
         log.info("Saving booking: {} for user: {}", booking.getId().value(), booking.getUserId().value());
-        return r2dbcRepository.save(mapper.toEntity(booking))
+        return r2dbcRepository.existsById(booking.getId().value())
+                .flatMap(exists -> {
+                    var entity = mapper.toEntity(booking);
+                    if (exists) {
+                        entity.markAsPersisted();
+                    }
+                    return r2dbcRepository.save(entity);
+                })
                 .map(mapper::toDomain)
                 .doOnSuccess(saved -> log.info("Successfully saved booking: {} with status: {}",
                         saved.getId().value(), saved.getStatus()))

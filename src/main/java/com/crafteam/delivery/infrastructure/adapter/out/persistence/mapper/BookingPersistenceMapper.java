@@ -22,7 +22,7 @@ public interface BookingPersistenceMapper {
     @Mapping(target = "slotId", source = "slotId", qualifiedByName = "slotIdToUuid")
     @Mapping(target = "userId", source = "userId", qualifiedByName = "userIdToUuid")
     @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
-    @Mapping(target = "isNew", constant = "false")
+    @Mapping(target = "isNew", constant = "true")
     BookingEntity toEntity(Booking booking);
 
     default Booking toDomain(BookingEntity entity) {

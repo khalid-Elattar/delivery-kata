@@ -15,11 +15,43 @@ import java.time.Instant;
 
 /**
  * Global exception handler for REST controllers.
+ * Handles all domain exceptions and provides detailed error responses.
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
+
+    // ========== BOOKING VALIDATION EXCEPTIONS ==========
+
+    @ExceptionHandler(BookingValidationException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleBookingValidation(BookingValidationException ex) {
+        log.warn("Booking validation error: {} - {}", ex.getErrorCode(), ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(
+                        HttpStatus.BAD_REQUEST.value(),
+                        ex.getErrorCode(),
+                        ex.getMessage(),
+                        Instant.now(),
+                        ex.getDetails()
+                )));
+    }
+
+    @ExceptionHandler(SlotNotAvailableException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleSlotNotAvailable(SlotNotAvailableException ex) {
+        log.warn("Slot not available: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        HttpStatus.CONFLICT.value(),
+                        "SLOT_NOT_AVAILABLE",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
+    // ========== NOT FOUND EXCEPTIONS ==========
 
     @ExceptionHandler(SlotNotFoundException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleSlotNotFound(SlotNotFoundException ex) {
@@ -60,6 +92,8 @@ public class GlobalExceptionHandler {
                 )));
     }
 
+    // ========== CONFLICT EXCEPTIONS ==========
+
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
         log.warn("Email already exists: {}", ex.getMessage());
@@ -72,6 +106,8 @@ public class GlobalExceptionHandler {
                         Instant.now()
                 )));
     }
+
+    // ========== AUTHENTICATION EXCEPTIONS ==========
 
     @ExceptionHandler(InvalidCredentialsException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleInvalidCredentials(InvalidCredentialsException ex) {
@@ -86,18 +122,7 @@ public class GlobalExceptionHandler {
                 )));
     }
 
-    @ExceptionHandler(SlotNotAvailableException.class)
-    public Mono<ResponseEntity<ErrorResponse>> handleSlotNotAvailable(SlotNotAvailableException ex) {
-        log.warn("Slot not available: {}", ex.getMessage());
-        return Mono.just(ResponseEntity
-                .status(HttpStatus.CONFLICT)
-                .body(new ErrorResponse(
-                        HttpStatus.CONFLICT.value(),
-                        "SLOT_NOT_AVAILABLE",
-                        ex.getMessage(),
-                        Instant.now()
-                )));
-    }
+    // ========== VALIDATION EXCEPTIONS ==========
 
     @ExceptionHandler(WebExchangeBindException.class)
     public Mono<ResponseEntity<ErrorResponse>> handleValidationErrors(WebExchangeBindException ex) {
@@ -128,6 +153,21 @@ public class GlobalExceptionHandler {
                         Instant.now()
                 )));
     }
+
+    @ExceptionHandler(IllegalStateException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleIllegalState(IllegalStateException ex) {
+        log.warn("Invalid state: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        HttpStatus.CONFLICT.value(),
+                        "INVALID_STATE",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
+    // ========== GENERIC EXCEPTION ==========
 
     @ExceptionHandler(Exception.class)
     public Mono<ResponseEntity<ErrorResponse>> handleGenericException(Exception ex) {

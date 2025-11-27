@@ -58,7 +58,14 @@ public class SlotRepositoryAdapter implements SlotRepository {
 
     @Override
     public Mono<Slot> save(Slot slot) {
-        return r2dbcRepository.save(mapper.toEntity(slot))
+        return r2dbcRepository.existsById(slot.getId().value())
+                .flatMap(exists -> {
+                    var entity = mapper.toEntity(slot);
+                    if (exists) {
+                        entity.markAsPersisted();
+                    }
+                    return r2dbcRepository.save(entity);
+                })
                 .map(mapper::toDomain);
     }
 
