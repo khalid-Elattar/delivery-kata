@@ -3,8 +3,8 @@ package com.crafteam.delivery.interfaces.rest.mapper;
 import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.booking.BookingId;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
 import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
 import org.mapstruct.Mapper;
@@ -19,7 +19,7 @@ public interface BookingWebMapper {
 
     @Mapping(target = "id", source = "id", qualifiedByName = "bookingIdToString")
     @Mapping(target = "slotId", source = "slotId", qualifiedByName = "slotIdToString")
-    @Mapping(target = "customerId", source = "customerId", qualifiedByName = "customerIdToString")
+    @Mapping(target = "userId", source = "userId", qualifiedByName = "userIdToString")
     BookingResponse toResponse(Booking booking);
 
     BookSlotCommand toCommand(BookSlotRequest request);
@@ -34,8 +34,8 @@ public interface BookingWebMapper {
         return slotId != null ? slotId.toString() : null;
     }
 
-    @Named("customerIdToString")
-    default String customerIdToString(CustomerId customerId) {
-        return customerId != null ? customerId.toString() : null;
+    @Named("userIdToString")
+    default String userIdToString(UserId userId) {
+        return userId != null ? userId.toString() : null;
     }
 }

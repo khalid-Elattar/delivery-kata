@@ -5,6 +5,6 @@ package com.crafteam.delivery.application.dto.command;
  */
 public record BookSlotCommand(
         String slotId,
-        String customerId
+        String userId
 ) {
 }

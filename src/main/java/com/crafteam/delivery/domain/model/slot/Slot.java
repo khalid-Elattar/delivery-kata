@@ -4,8 +4,8 @@ import com.crafteam.delivery.domain.event.SlotBookedEvent;
 import com.crafteam.delivery.domain.event.SlotCreatedEvent;
 import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.shared.DomainEvent;
+import com.crafteam.delivery.domain.model.user.UserId;
 
 import java.time.Instant;
 import java.time.LocalDate;
@@ -97,13 +97,13 @@ public class Slot {
     }
 
     /**
-     * Books this slot for a customer.
-     * @param customerId The customer making the booking
+     * Books this slot for a user.
+     * @param userId The user making the booking
      * @return The created booking
      * @throws SlotNotAvailableException if the slot is fully booked
      */
-    public Booking book(CustomerId customerId) {
-        Objects.requireNonNull(customerId, "Customer ID is required");
+    public Booking book(UserId userId) {
+        Objects.requireNonNull(userId, "User ID is required");
 
         if (!isAvailable()) {
             throw new SlotNotAvailableException(
@@ -113,12 +113,12 @@ public class Slot {
 
         bookedCount++;
 
-        Booking booking = Booking.create(this.id, customerId);
+        Booking booking = Booking.create(this.id, userId);
 
         domainEvents.add(new SlotBookedEvent(
                 this.id,
                 booking.getId(),
-                customerId,
+                userId,
                 this.remainingCapacity(),
                 Instant.now()
         ));

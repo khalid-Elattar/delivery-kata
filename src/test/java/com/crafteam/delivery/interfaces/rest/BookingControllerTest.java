@@ -5,12 +5,13 @@ import com.crafteam.delivery.application.dto.command.CancelBookingCommand;
 import com.crafteam.delivery.application.port.in.BookSlotUseCase;
 import com.crafteam.delivery.application.port.in.CancelBookingUseCase;
 import com.crafteam.delivery.application.port.in.GetBookingUseCase;
+import com.crafteam.delivery.application.port.out.UserRepository;
 import com.crafteam.delivery.domain.exception.BookingNotFoundException;
 import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
 import com.crafteam.delivery.domain.exception.SlotNotFoundException;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
 import com.crafteam.delivery.interfaces.rest.hateoas.BookingModelAssembler;
 import com.crafteam.delivery.infrastructure.config.SecurityConfig;
@@ -49,6 +50,9 @@ class BookingControllerTest {
     @MockBean
     private GetBookingUseCase getBookingUseCase;
 
+    @MockBean
+    private UserRepository userRepository;
+
     @Nested
     @DisplayName("POST /api/v1/bookings")
     class BookSlotTests {
@@ -59,13 +63,13 @@ class BookingControllerTest {
         void shouldBookSlotSuccessfully() {
             // Given
             SlotId slotId = SlotId.generate();
-            CustomerId customerId = CustomerId.generate();
+            UserId userId = UserId.generate();
             BookSlotRequest request = new BookSlotRequest(
                     slotId.toString(),
-                    customerId.toString()
+                    userId.toString()
             );
 
-            Booking booking = Booking.create(slotId, customerId);
+            Booking booking = Booking.create(slotId, userId);
 
             when(bookSlotUseCase.execute(any(BookSlotCommand.class)))
                     .thenReturn(Mono.just(booking));
@@ -79,7 +83,7 @@ class BookingControllerTest {
                     .expectStatus().isCreated()
                     .expectBody()
                     .jsonPath("$.slotId").isEqualTo(slotId.toString())
-                    .jsonPath("$.customerId").isEqualTo(customerId.toString())
+                    .jsonPath("$.userId").isEqualTo(userId.toString())
                     .jsonPath("$.status").isEqualTo("PENDING");
         }
 
@@ -160,8 +164,8 @@ class BookingControllerTest {
         void shouldReturnBookingById() {
             // Given
             SlotId slotId = SlotId.generate();
-            CustomerId customerId = CustomerId.generate();
-            Booking booking = Booking.create(slotId, customerId);
+            UserId userId = UserId.generate();
+            Booking booking = Booking.create(slotId, userId);
 
             when(getBookingUseCase.findById(booking.getId().toString()))
                     .thenReturn(Mono.just(booking));
@@ -197,24 +201,24 @@ class BookingControllerTest {
     }
 
     @Nested
-    @DisplayName("GET /api/v1/bookings/customer/{customerId}")
-    class GetCustomerBookingsTests {
+    @DisplayName("GET /api/v1/bookings/user/{userId}")
+    class GetUserBookingsTests {
 
         @Test
         @WithMockUser(roles = "USER")
-        @DisplayName("should return customer bookings")
-        void shouldReturnCustomerBookings() {
+        @DisplayName("should return user bookings")
+        void shouldReturnUserBookings() {
             // Given
             SlotId slotId = SlotId.generate();
-            CustomerId customerId = CustomerId.generate();
-            Booking booking = Booking.create(slotId, customerId);
+            UserId userId = UserId.generate();
+            Booking booking = Booking.create(slotId, userId);
 
-            when(getBookingUseCase.findByCustomerId(customerId.toString()))
+            when(getBookingUseCase.findByUserId(userId.toString()))
                     .thenReturn(Flux.just(booking));
 
             // When/Then
             webTestClient.get()
-                    .uri("/api/v1/bookings/customer/{customerId}", customerId.toString())
+                    .uri("/api/v1/bookings/user/{userId}", userId.toString())
                     .exchange()
                     .expectStatus().isOk();
         }

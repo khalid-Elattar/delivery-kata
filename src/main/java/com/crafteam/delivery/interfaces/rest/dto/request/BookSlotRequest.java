@@ -9,7 +9,7 @@ public record BookSlotRequest(
         @NotBlank(message = "Slot ID is required")
         String slotId,
 
-        @NotBlank(message = "Customer ID is required")
-        String customerId
+        @NotBlank(message = "User ID is required")
+        String userId
 ) {
 }

@@ -4,6 +4,7 @@ import com.crafteam.delivery.domain.event.BookingCancelledEvent;
 import com.crafteam.delivery.domain.event.BookingConfirmedEvent;
 import com.crafteam.delivery.domain.model.shared.DomainEvent;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ public class Booking {
 
     private final BookingId id;
     private final SlotId slotId;
-    private final CustomerId customerId;
+    private final UserId userId;
     private BookingStatus status;
     private final Instant createdAt;
     private Instant confirmedAt;
@@ -26,12 +27,12 @@ public class Booking {
 
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
-    private Booking(BookingId id, SlotId slotId, CustomerId customerId,
+    private Booking(BookingId id, SlotId slotId, UserId userId,
                     BookingStatus status, Instant createdAt,
                     Instant confirmedAt, Instant cancelledAt) {
         this.id = id;
         this.slotId = slotId;
-        this.customerId = customerId;
+        this.userId = userId;
         this.status = status;
         this.createdAt = createdAt;
         this.confirmedAt = confirmedAt;
@@ -41,14 +42,14 @@ public class Booking {
     /**
      * Factory method for creating a new booking.
      */
-    public static Booking create(SlotId slotId, CustomerId customerId) {
+    public static Booking create(SlotId slotId, UserId userId) {
         Objects.requireNonNull(slotId, "Slot ID is required");
-        Objects.requireNonNull(customerId, "Customer ID is required");
+        Objects.requireNonNull(userId, "User ID is required");
 
         return new Booking(
                 BookingId.generate(),
                 slotId,
-                customerId,
+                userId,
                 BookingStatus.PENDING,
                 Instant.now(),
                 null,
@@ -59,10 +60,10 @@ public class Booking {
     /**
      * Factory method for reconstituting from persistence.
      */
-    public static Booking reconstitute(BookingId id, SlotId slotId, CustomerId customerId,
+    public static Booking reconstitute(BookingId id, SlotId slotId, UserId userId,
                                        BookingStatus status, Instant createdAt,
                                        Instant confirmedAt, Instant cancelledAt) {
-        return new Booking(id, slotId, customerId, status, createdAt, confirmedAt, cancelledAt);
+        return new Booking(id, slotId, userId, status, createdAt, confirmedAt, cancelledAt);
     }
 
     // ========== BUSINESS METHODS ==========
@@ -82,7 +83,7 @@ public class Booking {
         this.confirmedAt = Instant.now();
 
         domainEvents.add(new BookingConfirmedEvent(
-                this.id, this.slotId, this.customerId, Instant.now()
+                this.id, this.slotId, this.userId, Instant.now()
         ));
     }
 
@@ -135,8 +136,8 @@ public class Booking {
         return slotId;
     }
 
-    public CustomerId getCustomerId() {
-        return customerId;
+    public UserId getUserId() {
+        return userId;
     }
 
     public BookingStatus getStatus() {
@@ -171,7 +172,7 @@ public class Booking {
 
     @Override
     public String toString() {
-        return "Booking{id=%s, slotId=%s, customerId=%s, status=%s, createdAt=%s}"
-                .formatted(id, slotId, customerId, status, createdAt);
+        return "Booking{id=%s, slotId=%s, userId=%s, status=%s, createdAt=%s}"
+                .formatted(id, slotId, userId, status, createdAt);
     }
 }

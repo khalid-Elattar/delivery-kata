@@ -1,8 +1,6 @@
 package com.crafteam.delivery.interfaces.rest;
 
-import com.crafteam.delivery.domain.exception.BookingNotFoundException;
-import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
-import com.crafteam.delivery.domain.exception.SlotNotFoundException;
+import com.crafteam.delivery.domain.exception.*;
 import com.crafteam.delivery.interfaces.rest.dto.response.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -44,6 +42,45 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(
                         HttpStatus.NOT_FOUND.value(),
                         "BOOKING_NOT_FOUND",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleUserNotFound(UserNotFoundException ex) {
+        log.warn("User not found: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(
+                        HttpStatus.NOT_FOUND.value(),
+                        "USER_NOT_FOUND",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
+    @ExceptionHandler(EmailAlreadyExistsException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleEmailAlreadyExists(EmailAlreadyExistsException ex) {
+        log.warn("Email already exists: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(
+                        HttpStatus.CONFLICT.value(),
+                        "EMAIL_ALREADY_EXISTS",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
+    @ExceptionHandler(InvalidCredentialsException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleInvalidCredentials(InvalidCredentialsException ex) {
+        log.warn("Invalid credentials: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_CREDENTIALS",
                         ex.getMessage(),
                         Instant.now()
                 )));

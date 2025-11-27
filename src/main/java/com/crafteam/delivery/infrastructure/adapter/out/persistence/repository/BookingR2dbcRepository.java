@@ -13,7 +13,7 @@ import java.util.UUID;
 @Repository
 public interface BookingR2dbcRepository extends R2dbcRepository<BookingEntity, UUID> {
 
-    Flux<BookingEntity> findByCustomerId(UUID customerId);
+    Flux<BookingEntity> findByUserId(UUID userId);
 
     Flux<BookingEntity> findBySlotId(UUID slotId);
 }

@@ -3,6 +3,7 @@ package com.crafteam.delivery.domain.model.booking;
 import com.crafteam.delivery.domain.event.BookingCancelledEvent;
 import com.crafteam.delivery.domain.event.BookingConfirmedEvent;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -21,15 +22,15 @@ class BookingTest {
         void shouldCreateBookingWithValidParameters() {
             // Given
             SlotId slotId = SlotId.generate();
-            CustomerId customerId = CustomerId.generate();
+            UserId userId = UserId.generate();
 
             // When
-            Booking booking = Booking.create(slotId, customerId);
+            Booking booking = Booking.create(slotId, userId);
 
             // Then
             assertThat(booking.getId()).isNotNull();
             assertThat(booking.getSlotId()).isEqualTo(slotId);
-            assertThat(booking.getCustomerId()).isEqualTo(customerId);
+            assertThat(booking.getUserId()).isEqualTo(userId);
             assertThat(booking.getStatus()).isEqualTo(BookingStatus.PENDING);
             assertThat(booking.getCreatedAt()).isNotNull();
             assertThat(booking.getConfirmedAt()).isNull();
@@ -40,18 +41,18 @@ class BookingTest {
         @DisplayName("should throw exception for null slot ID")
         void shouldThrowExceptionForNullSlotId() {
             // When/Then
-            assertThatThrownBy(() -> Booking.create(null, CustomerId.generate()))
+            assertThatThrownBy(() -> Booking.create(null, UserId.generate()))
                     .isInstanceOf(NullPointerException.class)
                     .hasMessage("Slot ID is required");
         }
 
         @Test
-        @DisplayName("should throw exception for null customer ID")
-        void shouldThrowExceptionForNullCustomerId() {
+        @DisplayName("should throw exception for null user ID")
+        void shouldThrowExceptionForNullUserId() {
             // When/Then
             assertThatThrownBy(() -> Booking.create(SlotId.generate(), null))
                     .isInstanceOf(NullPointerException.class)
-                    .hasMessage("Customer ID is required");
+                    .hasMessage("User ID is required");
         }
     }
 
@@ -214,6 +215,6 @@ class BookingTest {
     }
 
     private Booking createPendingBooking() {
-        return Booking.create(SlotId.generate(), CustomerId.generate());
+        return Booking.create(SlotId.generate(), UserId.generate());
     }
 }

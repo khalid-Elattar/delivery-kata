@@ -6,14 +6,15 @@ services:
     container_name: delivery-postgres
     environment:
       POSTGRES_DB: delivery
-      POSTGRES_USER: delivery
-      POSTGRES_PASSWORD: delivery
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U delivery"]
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
       timeout: 5s
       retries: 5

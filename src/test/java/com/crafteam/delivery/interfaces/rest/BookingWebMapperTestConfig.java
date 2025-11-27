@@ -25,7 +25,7 @@ public class BookingWebMapperTestConfig {
                 return new BookingResponse(
                         booking.getId().toString(),
                         booking.getSlotId().toString(),
-                        booking.getCustomerId().toString(),
+                        booking.getUserId().toString(),
                         booking.getStatus(),
                         booking.getCreatedAt(),
                         booking.getConfirmedAt(),
@@ -40,7 +40,7 @@ public class BookingWebMapperTestConfig {
                 }
                 return new BookSlotCommand(
                         request.slotId(),
-                        request.customerId()
+                        request.userId()
                 );
             }
         };

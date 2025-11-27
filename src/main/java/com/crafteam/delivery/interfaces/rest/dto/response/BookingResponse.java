@@ -10,7 +10,7 @@ import java.time.Instant;
 public record BookingResponse(
         String id,
         String slotId,
-        String customerId,
+        String userId,
         BookingStatus status,
         Instant createdAt,
         Instant confirmedAt,

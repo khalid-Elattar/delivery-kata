@@ -5,12 +5,24 @@ spring:
   # R2DBC PostgreSQL
   r2dbc:
     url: r2dbc:postgresql://localhost:5432/delivery
-    username: delivery
-    password: delivery
+    username: postgres
+    password: postgres
     pool:
       initial-size: 10
       max-size: 50
       max-idle-time: 30m
+
+  # JDBC DataSource for Liquibase migrations (required for DDL)
+  datasource:
+    url: jdbc:postgresql://localhost:5432/delivery
+    username: postgres
+    password: postgres
+    driver-class-name: org.postgresql.Driver
+
+  # Liquibase configuration
+  liquibase:
+    enabled: true
+    change-log: classpath:db/changelog/db.changelog-master.yaml
 
   # Redis
   data:
@@ -63,13 +75,11 @@ management:
     health:
       show-details: when_authorized
 
-# Logging
+# Logging is configured via logback-spring.xml for structured logging
+# Only specify the log path here
 logging:
-  level:
-    com.crafteam.delivery: DEBUG
-    org.springframework.r2dbc: DEBUG
-    org.springframework.kafka: INFO
-    org.springframework.security: DEBUG
+  file:
+    path: logs
 
 # Custom properties
 delivery:

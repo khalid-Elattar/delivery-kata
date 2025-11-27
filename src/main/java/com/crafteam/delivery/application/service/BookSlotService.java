@@ -8,8 +8,8 @@ import com.crafteam.delivery.application.port.out.SlotCachePort;
 import com.crafteam.delivery.application.port.out.SlotRepository;
 import com.crafteam.delivery.domain.exception.SlotNotFoundException;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -42,17 +42,17 @@ public class BookSlotService implements BookSlotUseCase {
 
     @Override
     public Mono<Booking> execute(BookSlotCommand command) {
-        log.info("Booking slot: slotId={}, customerId={}",
-                command.slotId(), command.customerId());
+        log.info("Booking slot: slotId={}, userId={}",
+                command.slotId(), command.userId());
 
         SlotId slotId = SlotId.from(command.slotId());
-        CustomerId customerId = CustomerId.from(command.customerId());
+        UserId userId = UserId.from(command.userId());
 
         return slotRepository.findById(slotId)
                 .switchIfEmpty(Mono.error(new SlotNotFoundException(command.slotId())))
                 .flatMap(slot -> {
                     // Domain logic - book the slot
-                    Booking booking = slot.book(customerId);
+                    Booking booking = slot.book(userId);
 
                     // Persist both slot and booking
                     return slotRepository.save(slot)

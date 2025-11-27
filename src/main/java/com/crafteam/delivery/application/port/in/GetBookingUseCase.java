@@ -10,5 +10,5 @@ import reactor.core.publisher.Mono;
 public interface GetBookingUseCase {
     Mono<Booking> findById(String bookingId);
 
-    Flux<Booking> findByCustomerId(String customerId);
+    Flux<Booking> findByUserId(String userId);
 }

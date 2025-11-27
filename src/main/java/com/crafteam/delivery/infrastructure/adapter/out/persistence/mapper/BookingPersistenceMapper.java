@@ -3,8 +3,8 @@ package com.crafteam.delivery.infrastructure.adapter.out.persistence.mapper;
 import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.booking.BookingId;
 import com.crafteam.delivery.domain.model.booking.BookingStatus;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
 import com.crafteam.delivery.domain.model.slot.SlotId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import com.crafteam.delivery.infrastructure.adapter.out.persistence.entity.BookingEntity;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -20,8 +20,9 @@ public interface BookingPersistenceMapper {
 
     @Mapping(target = "id", source = "id", qualifiedByName = "bookingIdToUuid")
     @Mapping(target = "slotId", source = "slotId", qualifiedByName = "slotIdToUuid")
-    @Mapping(target = "customerId", source = "customerId", qualifiedByName = "customerIdToUuid")
+    @Mapping(target = "userId", source = "userId", qualifiedByName = "userIdToUuid")
     @Mapping(target = "status", source = "status", qualifiedByName = "statusToString")
+    @Mapping(target = "isNew", constant = "false")
     BookingEntity toEntity(Booking booking);
 
     default Booking toDomain(BookingEntity entity) {
@@ -31,7 +32,7 @@ public interface BookingPersistenceMapper {
         return Booking.reconstitute(
                 BookingId.from(entity.getId()),
                 SlotId.from(entity.getSlotId()),
-                CustomerId.from(entity.getCustomerId()),
+                UserId.from(entity.getUserId()),
                 BookingStatus.valueOf(entity.getStatus()),
                 entity.getCreatedAt(),
                 entity.getConfirmedAt(),
@@ -49,9 +50,9 @@ public interface BookingPersistenceMapper {
         return slotId != null ? slotId.value() : null;
     }
 
-    @Named("customerIdToUuid")
-    default UUID customerIdToUuid(CustomerId customerId) {
-        return customerId != null ? customerId.value() : null;
+    @Named("userIdToUuid")
+    default UUID userIdToUuid(UserId userId) {
+        return userId != null ? userId.value() : null;
     }
 
     @Named("statusToString")

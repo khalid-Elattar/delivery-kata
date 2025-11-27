@@ -1,0 +1,64 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-create-slots-table
+      author: crafteam
+      changes:
+        - createTable:
+            tableName: slots
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: delivery_mode
+                  type: varchar(50)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: date
+                  type: date
+                  constraints:
+                    nullable: false
+              - column:
+                  name: start_time
+                  type: time
+                  constraints:
+                    nullable: false
+              - column:
+                  name: end_time
+                  type: time
+                  constraints:
+                    nullable: false
+              - column:
+                  name: capacity
+                  type: integer
+                  constraints:
+                    nullable: false
+              - column:
+                  name: booked_count
+                  type: integer
+                  defaultValueNumeric: 0
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  defaultValueComputed: CURRENT_TIMESTAMP
+        - addCheckConstraint:
+            tableName: slots
+            constraintName: chk_capacity
+            validate: true
+            constraintBody: capacity > 0
+        - addCheckConstraint:
+            tableName: slots
+            constraintName: chk_booked_count
+            validate: true
+            constraintBody: booked_count >= 0 AND booked_count <= capacity
+        - addCheckConstraint:
+            tableName: slots
+            constraintName: chk_time_order
+            validate: true
+            constraintBody: end_time > start_time

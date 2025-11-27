@@ -22,6 +22,8 @@ public interface SlotPersistenceMapper {
     @Mapping(target = "deliveryMode", source = "deliveryMode", qualifiedByName = "deliveryModeToString")
     @Mapping(target = "startTime", source = "timeSlot.startTime")
     @Mapping(target = "endTime", source = "timeSlot.endTime")
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "isNew", constant = "false")
     SlotEntity toEntity(Slot slot);
 
     default Slot toDomain(SlotEntity entity) {

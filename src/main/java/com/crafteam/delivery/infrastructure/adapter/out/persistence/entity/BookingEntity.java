@@ -1,6 +1,14 @@
 package com.crafteam.delivery.infrastructure.adapter.out.persistence.entity;
 
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.annotation.Transient;
+import org.springframework.data.domain.Persistable;
 import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
@@ -9,22 +17,32 @@ import java.util.UUID;
 
 /**
  * R2DBC entity for bookings table.
+ * Implements Persistable to control new vs existing entity detection.
+ * Represents the many-to-one relationship with User (via user_id).
  */
+@Data
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Table("bookings")
-public class BookingEntity {
+public class BookingEntity implements Persistable<UUID> {
 
     @Id
     private UUID id;
 
+    @NotNull(message = "Slot ID is required")
     @Column("slot_id")
     private UUID slotId;
 
-    @Column("customer_id")
-    private UUID customerId;
+    @NotNull(message = "User ID is required")
+    @Column("user_id")
+    private UUID userId;
 
+    @NotBlank(message = "Status is required")
     @Column("status")
     private String status;
 
+    @NotNull(message = "Created at is required")
     @Column("created_at")
     private Instant createdAt;
 
@@ -34,73 +52,23 @@ public class BookingEntity {
     @Column("cancelled_at")
     private Instant cancelledAt;
 
-    public BookingEntity() {
+    /**
+     * Flag to indicate if this is a new entity (for R2DBC to decide INSERT vs UPDATE).
+     */
+    @Transient
+    @Builder.Default
+    private boolean isNew = true;
+
+    @Override
+    public boolean isNew() {
+        return isNew;
     }
 
-    public BookingEntity(UUID id, UUID slotId, UUID customerId, String status,
-                         Instant createdAt, Instant confirmedAt, Instant cancelledAt) {
-        this.id = id;
-        this.slotId = slotId;
-        this.customerId = customerId;
-        this.status = status;
-        this.createdAt = createdAt;
-        this.confirmedAt = confirmedAt;
-        this.cancelledAt = cancelledAt;
-    }
-
-    public UUID getId() {
-        return id;
-    }
-
-    public void setId(UUID id) {
-        this.id = id;
-    }
-
-    public UUID getSlotId() {
-        return slotId;
-    }
-
-    public void setSlotId(UUID slotId) {
-        this.slotId = slotId;
-    }
-
-    public UUID getCustomerId() {
-        return customerId;
-    }
-
-    public void setCustomerId(UUID customerId) {
-        this.customerId = customerId;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    public Instant getConfirmedAt() {
-        return confirmedAt;
-    }
-
-    public void setConfirmedAt(Instant confirmedAt) {
-        this.confirmedAt = confirmedAt;
-    }
-
-    public Instant getCancelledAt() {
-        return cancelledAt;
-    }
-
-    public void setCancelledAt(Instant cancelledAt) {
-        this.cancelledAt = cancelledAt;
+    /**
+     * Mark entity as persisted (not new).
+     */
+    public BookingEntity markAsPersisted() {
+        this.isNew = false;
+        return this;
     }
 }

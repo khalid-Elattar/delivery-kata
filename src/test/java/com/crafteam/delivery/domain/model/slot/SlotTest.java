@@ -4,7 +4,7 @@ import com.crafteam.delivery.domain.event.SlotBookedEvent;
 import com.crafteam.delivery.domain.event.SlotCreatedEvent;
 import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -101,16 +101,16 @@ class SlotTest {
         void shouldBookSlotSuccessfully() {
             // Given
             Slot slot = createValidSlot(5);
-            CustomerId customerId = CustomerId.generate();
+            UserId userId = UserId.generate();
             slot.clearDomainEvents(); // Clear creation event
 
             // When
-            Booking booking = slot.book(customerId);
+            Booking booking = slot.book(userId);
 
             // Then
             assertThat(booking).isNotNull();
             assertThat(booking.getSlotId()).isEqualTo(slot.getId());
-            assertThat(booking.getCustomerId()).isEqualTo(customerId);
+            assertThat(booking.getUserId()).isEqualTo(userId);
             assertThat(slot.getBookedCount()).isEqualTo(1);
             assertThat(slot.remainingCapacity()).isEqualTo(4);
         }
@@ -120,11 +120,11 @@ class SlotTest {
         void shouldEmitSlotBookedEventOnBooking() {
             // Given
             Slot slot = createValidSlot(5);
-            CustomerId customerId = CustomerId.generate();
+            UserId userId = UserId.generate();
             slot.clearDomainEvents();
 
             // When
-            Booking booking = slot.book(customerId);
+            Booking booking = slot.book(userId);
 
             // Then
             assertThat(slot.getDomainEvents()).hasSize(1);
@@ -132,7 +132,7 @@ class SlotTest {
             SlotBookedEvent event = (SlotBookedEvent) slot.getDomainEvents().get(0);
             assertThat(event.slotId()).isEqualTo(slot.getId());
             assertThat(event.bookingId()).isEqualTo(booking.getId());
-            assertThat(event.customerId()).isEqualTo(customerId);
+            assertThat(event.userId()).isEqualTo(userId);
         }
 
         @Test
@@ -140,10 +140,10 @@ class SlotTest {
         void shouldThrowExceptionWhenSlotIsFullyBooked() {
             // Given
             Slot slot = createValidSlot(1);
-            slot.book(CustomerId.generate());
+            slot.book(UserId.generate());
 
             // When/Then
-            assertThatThrownBy(() -> slot.book(CustomerId.generate()))
+            assertThatThrownBy(() -> slot.book(UserId.generate()))
                     .isInstanceOf(SlotNotAvailableException.class)
                     .hasMessageContaining("is fully booked");
         }
@@ -155,9 +155,9 @@ class SlotTest {
             Slot slot = createValidSlot(3);
 
             // When
-            slot.book(CustomerId.generate());
-            slot.book(CustomerId.generate());
-            slot.book(CustomerId.generate());
+            slot.book(UserId.generate());
+            slot.book(UserId.generate());
+            slot.book(UserId.generate());
 
             // Then
             assertThat(slot.isAvailable()).isFalse();
@@ -174,7 +174,7 @@ class SlotTest {
         void shouldReleaseBookingAndIncreaseCapacity() {
             // Given
             Slot slot = createValidSlot(2);
-            slot.book(CustomerId.generate());
+            slot.book(UserId.generate());
             int bookedBefore = slot.getBookedCount();
 
             // When

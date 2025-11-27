@@ -1,0 +1,65 @@
+databaseChangeLog:
+  - changeSet:
+      id: 003-create-bookings-table
+      author: crafteam
+      comments: >
+        Bookings table with foreign key to users (user_id).
+        In R2DBC, relationships are handled at the application layer.
+        User has many Bookings - loaded reactively via findByUserId.
+      changes:
+        - createTable:
+            tableName: bookings
+            columns:
+              - column:
+                  name: id
+                  type: uuid
+                  constraints:
+                    primaryKey: true
+                    nullable: false
+              - column:
+                  name: slot_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: user_id
+                  type: uuid
+                  constraints:
+                    nullable: false
+              - column:
+                  name: status
+                  type: varchar(20)
+                  constraints:
+                    nullable: false
+              - column:
+                  name: created_at
+                  type: timestamp
+                  constraints:
+                    nullable: false
+              - column:
+                  name: confirmed_at
+                  type: timestamp
+              - column:
+                  name: cancelled_at
+                  type: timestamp
+        - addForeignKeyConstraint:
+            baseTableName: bookings
+            baseColumnNames: slot_id
+            referencedTableName: slots
+            referencedColumnNames: id
+            constraintName: fk_bookings_slot
+            onDelete: RESTRICT
+            onUpdate: CASCADE
+        - addForeignKeyConstraint:
+            baseTableName: bookings
+            baseColumnNames: user_id
+            referencedTableName: users
+            referencedColumnNames: id
+            constraintName: fk_bookings_user
+            onDelete: CASCADE
+            onUpdate: CASCADE
+        - addCheckConstraint:
+            tableName: bookings
+            constraintName: chk_status
+            validate: true
+            constraintBody: status IN ('PENDING', 'CONFIRMED', 'CANCELLED')

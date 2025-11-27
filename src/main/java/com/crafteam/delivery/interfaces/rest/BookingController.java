@@ -71,11 +71,11 @@ public class BookingController {
                 .map(bookingModelAssembler::toModel);
     }
 
-    @GetMapping(value = "/customer/{customerId}", produces = MediaType.APPLICATION_JSON_VALUE)
-    @Operation(summary = "Get bookings by customer", description = "Retrieves all bookings for a customer")
-    public Mono<CollectionModel<EntityModel<BookingResponse>>> getCustomerBookings(
-            @PathVariable String customerId) {
-        return getBookingUseCase.findByCustomerId(customerId)
+    @GetMapping(value = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @Operation(summary = "Get bookings by user", description = "Retrieves all bookings for a user")
+    public Mono<CollectionModel<EntityModel<BookingResponse>>> getUserBookings(
+            @PathVariable String userId) {
+        return getBookingUseCase.findByUserId(userId)
                 .map(bookingWebMapper::toResponse)
                 .map(bookingModelAssembler::toModel)
                 .collectList()

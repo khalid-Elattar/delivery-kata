@@ -5,7 +5,7 @@ import com.crafteam.delivery.application.port.out.BookingRepository;
 import com.crafteam.delivery.domain.exception.BookingNotFoundException;
 import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.booking.BookingId;
-import com.crafteam.delivery.domain.model.booking.CustomerId;
+import com.crafteam.delivery.domain.model.user.UserId;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -29,7 +29,7 @@ public class GetBookingService implements GetBookingUseCase {
     }
 
     @Override
-    public Flux<Booking> findByCustomerId(String customerId) {
-        return bookingRepository.findByCustomerId(CustomerId.from(customerId));
+    public Flux<Booking> findByUserId(String userId) {
+        return bookingRepository.findByUserId(UserId.from(userId));
     }
 }
