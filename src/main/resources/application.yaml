@@ -54,6 +54,14 @@ spring:
 server:
   port: 8080
 
+# JWT Configuration
+jwt:
+  secret: ${JWT_SECRET:changeme-this-is-a-very-long-secret-key-for-jwt-signing-must-be-at-least-512-bits}
+  access-token:
+    expiration-ms: 3600000  # 1 hour in milliseconds
+  refresh-token:
+    expiration-days: 30  # 30 days
+
 # OpenAPI / Swagger
 springdoc:
   api-docs:

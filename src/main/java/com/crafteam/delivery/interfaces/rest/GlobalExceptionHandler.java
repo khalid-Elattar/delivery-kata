@@ -122,6 +122,19 @@ public class GlobalExceptionHandler {
                 )));
     }
 
+    @ExceptionHandler(InvalidTokenException.class)
+    public Mono<ResponseEntity<ErrorResponse>> handleInvalidToken(InvalidTokenException ex) {
+        log.warn("Invalid token: {}", ex.getMessage());
+        return Mono.just(ResponseEntity
+                .status(HttpStatus.UNAUTHORIZED)
+                .body(new ErrorResponse(
+                        HttpStatus.UNAUTHORIZED.value(),
+                        "INVALID_TOKEN",
+                        ex.getMessage(),
+                        Instant.now()
+                )));
+    }
+
     // ========== VALIDATION EXCEPTIONS ==========
 
     @ExceptionHandler(WebExchangeBindException.class)

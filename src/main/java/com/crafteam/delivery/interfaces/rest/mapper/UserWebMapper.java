@@ -2,11 +2,13 @@ package com.crafteam.delivery.interfaces.rest.mapper;
 
 import com.crafteam.delivery.application.dto.command.ChangePasswordCommand;
 import com.crafteam.delivery.application.dto.command.LoginCommand;
+import com.crafteam.delivery.application.dto.command.RefreshTokenCommand;
 import com.crafteam.delivery.application.dto.command.RegisterUserCommand;
 import com.crafteam.delivery.application.dto.command.UpdateUserCommand;
 import com.crafteam.delivery.domain.model.user.*;
 import com.crafteam.delivery.interfaces.rest.dto.request.ChangePasswordRequest;
 import com.crafteam.delivery.interfaces.rest.dto.request.LoginRequest;
+import com.crafteam.delivery.interfaces.rest.dto.request.RefreshTokenRequest;
 import com.crafteam.delivery.interfaces.rest.dto.request.RegisterRequest;
 import com.crafteam.delivery.interfaces.rest.dto.request.UpdateUserRequest;
 import com.crafteam.delivery.interfaces.rest.dto.response.LoginResponse;
@@ -24,6 +26,8 @@ public interface UserWebMapper {
     RegisterUserCommand toCommand(RegisterRequest request);
 
     LoginCommand toCommand(LoginRequest request);
+
+    RefreshTokenCommand toCommand(RefreshTokenRequest request);
 
     @Mapping(target = "userId", source = "userId")
     UpdateUserCommand toCommand(UpdateUserRequest request, String userId);
