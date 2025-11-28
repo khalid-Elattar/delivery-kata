@@ -7,7 +7,6 @@ import com.crafteam.delivery.application.port.in.GetSlotAvailabilityUseCase;
 import com.crafteam.delivery.application.port.out.UserRepository;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
-import com.crafteam.delivery.domain.model.slot.TimeSlot;
 import com.crafteam.delivery.interfaces.rest.dto.request.CreateSlotRequest;
 import com.crafteam.delivery.interfaces.rest.hateoas.SlotModelAssembler;
 import com.crafteam.delivery.infrastructure.config.SecurityConfig;
@@ -24,8 +23,11 @@ import org.springframework.test.web.reactive.server.WebTestClient;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalTime;
+import java.util.List;
+import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
@@ -56,23 +58,27 @@ class SlotControllerTest {
 
         @Test
         @WithMockUser(roles = "ADMIN")
-        @DisplayName("should create slot successfully as admin")
+        @DisplayName("should create slot template successfully as admin")
         void shouldCreateSlotSuccessfullyAsAdmin() {
-            // Given
-            LocalDate validDate = getNextValidDate(DeliveryMode.DRIVE);
+            // Given - Create slot template request
             CreateSlotRequest request = new CreateSlotRequest(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    LocalTime.of(9, 0),
-                    LocalTime.of(10, 0),
-                    5
+                    List.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    60, // 60 minutes duration
+                    10
             );
 
             Slot slot = Slot.create(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0)),
-                    5
+                    Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                            DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10
             );
 
             when(createSlotUseCase.execute(any(CreateSlotCommand.class)))
@@ -87,23 +93,21 @@ class SlotControllerTest {
                     .expectStatus().isCreated()
                     .expectBody()
                     .jsonPath("$.deliveryMode").isEqualTo("DRIVE")
-                    .jsonPath("$.capacity").isEqualTo(5)
-                    .jsonPath("$.bookedCount").isEqualTo(0)
-                    .jsonPath("$.available").isEqualTo(true);
+                    .jsonPath("$.capacity").isEqualTo(10);
         }
 
         @Test
         @WithMockUser(roles = "USER")
         @DisplayName("should return 403 for non-admin user")
         void shouldReturn403ForNonAdminUser() {
-            // Given
-            LocalDate validDate = getNextValidDate(DeliveryMode.DRIVE);
+            // Given - Create slot template request
             CreateSlotRequest request = new CreateSlotRequest(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    LocalTime.of(9, 0),
-                    LocalTime.of(10, 0),
-                    5
+                    List.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    60,
+                    10
             );
 
             // When/Then
@@ -119,13 +123,13 @@ class SlotControllerTest {
         @DisplayName("should return 401 for unauthenticated request")
         void shouldReturn401ForUnauthenticatedRequest() {
             // Given
-            LocalDate validDate = getNextValidDate(DeliveryMode.DRIVE);
             CreateSlotRequest request = new CreateSlotRequest(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    LocalTime.of(9, 0),
-                    LocalTime.of(10, 0),
-                    5
+                    List.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    60,
+                    10
             );
 
             // When/Then
@@ -144,18 +148,19 @@ class SlotControllerTest {
 
         @Test
         @WithMockUser(roles = "USER")
-        @DisplayName("should return available slots")
+        @DisplayName("should return available slot templates")
         void shouldReturnAvailableSlots() {
             // Given
-            LocalDate validDate = getNextValidDate(DeliveryMode.DRIVE);
             Slot slot = Slot.create(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0)),
-                    5
+                    Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10
             );
 
-            when(getAvailableSlotsUseCase.execute(DeliveryMode.DRIVE, validDate))
+            when(getAvailableSlotsUseCase.execute(any(DeliveryMode.class), any()))
                     .thenReturn(Flux.just(slot));
 
             // When/Then
@@ -163,7 +168,7 @@ class SlotControllerTest {
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/slots")
                             .queryParam("mode", "DRIVE")
-                            .queryParam("date", validDate.toString())
+                            .queryParam("date", "2024-01-15")
                             .build())
                     .exchange()
                     .expectStatus().isOk();
@@ -172,15 +177,12 @@ class SlotControllerTest {
         @Test
         @DisplayName("should return 401 for unauthenticated request")
         void shouldReturn401ForUnauthenticatedRequest() {
-            // Given
-            LocalDate validDate = LocalDate.now();
-
             // When/Then
             webTestClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/api/v1/slots")
                             .queryParam("mode", "DRIVE")
-                            .queryParam("date", validDate.toString())
+                            .queryParam("date", "2024-01-15")
                             .build())
                     .exchange()
                     .expectStatus().isUnauthorized();
@@ -193,15 +195,16 @@ class SlotControllerTest {
 
         @Test
         @WithMockUser(roles = "USER")
-        @DisplayName("should return all slots")
+        @DisplayName("should return all slot templates")
         void shouldReturnAllSlots() {
             // Given
-            LocalDate validDate = getNextValidDate(DeliveryMode.DRIVE);
             Slot slot = Slot.create(
                     DeliveryMode.DRIVE,
-                    validDate,
-                    new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0)),
-                    5
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10
             );
 
             when(getAvailableSlotsUseCase.executeAll())
@@ -213,13 +216,5 @@ class SlotControllerTest {
                     .exchange()
                     .expectStatus().isOk();
         }
-    }
-
-    private LocalDate getNextValidDate(DeliveryMode mode) {
-        LocalDate date = LocalDate.now();
-        while (!mode.isAvailableFor(date)) {
-            date = date.plusDays(1);
-        }
-        return date;
     }
 }

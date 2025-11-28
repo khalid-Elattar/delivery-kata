@@ -7,6 +7,8 @@ import com.crafteam.delivery.domain.model.slot.SlotId;
 import com.crafteam.delivery.domain.model.user.UserId;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -24,12 +26,15 @@ public class Booking {
     private final Instant createdAt;
     private Instant confirmedAt;
     private Instant cancelledAt;
+    private final LocalDate bookingDate;
+    private final LocalTime bookingTime;
 
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     private Booking(BookingId id, SlotId slotId, UserId userId,
                     BookingStatus status, Instant createdAt,
-                    Instant confirmedAt, Instant cancelledAt) {
+                    Instant confirmedAt, Instant cancelledAt,
+                    LocalDate bookingDate, LocalTime bookingTime) {
         this.id = id;
         this.slotId = slotId;
         this.userId = userId;
@@ -37,6 +42,8 @@ public class Booking {
         this.createdAt = createdAt;
         this.confirmedAt = confirmedAt;
         this.cancelledAt = cancelledAt;
+        this.bookingDate = bookingDate;
+        this.bookingTime = bookingTime;
     }
 
     /**
@@ -53,7 +60,31 @@ public class Booking {
                 BookingStatus.PENDING,
                 Instant.now(),
                 null,
-                null
+                null,
+                null,  // bookingDate (optional for legacy)
+                null   // bookingTime (optional for legacy)
+        );
+    }
+
+    /**
+     * Factory method for creating a new booking with date and time.
+     */
+    public static Booking create(SlotId slotId, UserId userId, LocalDate bookingDate, LocalTime bookingTime) {
+        Objects.requireNonNull(slotId, "Slot ID is required");
+        Objects.requireNonNull(userId, "User ID is required");
+        Objects.requireNonNull(bookingDate, "Booking date is required");
+        Objects.requireNonNull(bookingTime, "Booking time is required");
+
+        return new Booking(
+                BookingId.generate(),
+                slotId,
+                userId,
+                BookingStatus.PENDING,
+                Instant.now(),
+                null,
+                null,
+                bookingDate,
+                bookingTime
         );
     }
 
@@ -62,8 +93,10 @@ public class Booking {
      */
     public static Booking reconstitute(BookingId id, SlotId slotId, UserId userId,
                                        BookingStatus status, Instant createdAt,
-                                       Instant confirmedAt, Instant cancelledAt) {
-        return new Booking(id, slotId, userId, status, createdAt, confirmedAt, cancelledAt);
+                                       Instant confirmedAt, Instant cancelledAt,
+                                       LocalDate bookingDate, LocalTime bookingTime) {
+        return new Booking(id, slotId, userId, status, createdAt, confirmedAt, cancelledAt,
+                bookingDate, bookingTime);
     }
 
     // ========== BUSINESS METHODS ==========
@@ -154,6 +187,14 @@ public class Booking {
 
     public Instant getCancelledAt() {
         return cancelledAt;
+    }
+
+    public LocalDate getBookingDate() {
+        return bookingDate;
+    }
+
+    public LocalTime getBookingTime() {
+        return bookingTime;
     }
 
     // ========== EQUALITY (by ID) ==========

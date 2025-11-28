@@ -14,12 +14,13 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
-import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.UUID;
 
 /**
  * R2DBC entity for slots table.
+ * Represents a slot availability template (not a specific booking).
+ *
  * Implements Persistable to control new vs existing entity detection.
  */
 @Data
@@ -36,9 +37,12 @@ public class SlotEntity implements Persistable<UUID> {
     @Column("delivery_mode")
     private String deliveryMode;
 
-    @NotNull(message = "Date is required")
-    @Column("date")
-    private LocalDate date;
+    /**
+     * Comma-separated list of available days (e.g., "MONDAY,TUESDAY,WEDNESDAY").
+     */
+    @NotBlank(message = "Available days are required")
+    @Column("available_days")
+    private String availableDays;
 
     @NotNull(message = "Start time is required")
     @Column("start_time")
@@ -48,13 +52,19 @@ public class SlotEntity implements Persistable<UUID> {
     @Column("end_time")
     private LocalTime endTime;
 
+    /**
+     * Slot duration in minutes.
+     */
+    @Min(value = 1, message = "Slot duration must be at least 1 minute")
+    @Column("slot_duration")
+    private Integer slotDuration;
+
+    /**
+     * Maximum number of bookings allowed per time slot per day.
+     */
     @Min(value = 1, message = "Capacity must be at least 1")
     @Column("capacity")
-    private int capacity;
-
-    @Min(value = 0, message = "Booked count cannot be negative")
-    @Column("booked_count")
-    private int bookedCount;
+    private Integer capacity;
 
     @Column("created_at")
     private Instant createdAt;

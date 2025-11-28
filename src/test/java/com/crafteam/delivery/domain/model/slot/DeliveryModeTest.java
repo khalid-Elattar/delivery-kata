@@ -494,6 +494,123 @@ class DeliveryModeTest {
         }
     }
 
+    @Nested
+    @DisplayName("isValidSlotStartTime - Slot Grid Validation")
+    class IsValidSlotStartTimeTests {
+
+        @Test
+        @DisplayName("DRIVE: valid times on 1h grid should return true")
+        void driveValidTimesOnGridShouldReturnTrue() {
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(8, 0))).isTrue();
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(9, 0))).isTrue();
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(10, 0))).isTrue();
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(19, 0))).isTrue();
+        }
+
+        @Test
+        @DisplayName("DRIVE: times not on 1h grid should return false")
+        void driveTimesNotOnGridShouldReturnFalse() {
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(8, 30))).isFalse();
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(10, 15))).isFalse();
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(10, 45))).isFalse();
+        }
+
+        @Test
+        @DisplayName("DRIVE: time at endTime should be invalid")
+        void driveTimeAtEndTimeShouldBeInvalid() {
+            assertThat(DeliveryMode.DRIVE.isValidSlotStartTime(LocalTime.of(20, 0))).isFalse();
+        }
+
+        @Test
+        @DisplayName("DELIVERY: valid times on 2h grid should return true")
+        void deliveryValidTimesOnGridShouldReturnTrue() {
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(9, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(11, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(13, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(15, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(17, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(19, 0))).isTrue();
+        }
+
+        @Test
+        @DisplayName("DELIVERY: times not on 2h grid should return false")
+        void deliveryTimesNotOnGridShouldReturnFalse() {
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(10, 0))).isFalse();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(12, 0))).isFalse();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(14, 0))).isFalse();
+            assertThat(DeliveryMode.DELIVERY.isValidSlotStartTime(LocalTime.of(16, 0))).isFalse();
+        }
+
+        @Test
+        @DisplayName("DELIVERY_ASAP: valid times on 30min grid should return true")
+        void deliveryAsapValidTimesOnGridShouldReturnTrue() {
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(8, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(8, 30))).isTrue();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(9, 0))).isTrue();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(9, 30))).isTrue();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(22, 30))).isTrue();
+        }
+
+        @Test
+        @DisplayName("DELIVERY_ASAP: times not on 30min grid should return false")
+        void deliveryAsapTimesNotOnGridShouldReturnFalse() {
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(8, 15))).isFalse();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(8, 45))).isFalse();
+            assertThat(DeliveryMode.DELIVERY_ASAP.isValidSlotStartTime(LocalTime.of(10, 20))).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("getAvailableSlotTimes")
+    class GetAvailableSlotTimesTests {
+
+        @Test
+        @DisplayName("DRIVE should have 12 slot times (08:00-19:00, 1h intervals)")
+        void driveShouldHave12SlotTimes() {
+            var times = DeliveryMode.DRIVE.getAvailableSlotTimes();
+
+            assertThat(times).hasSize(12);
+            assertThat(times.get(0)).isEqualTo(LocalTime.of(8, 0));
+            assertThat(times.get(11)).isEqualTo(LocalTime.of(19, 0));
+        }
+
+        @Test
+        @DisplayName("DELIVERY should have 6 slot times (09:00-19:00, 2h intervals)")
+        void deliveryShouldHave6SlotTimes() {
+            var times = DeliveryMode.DELIVERY.getAvailableSlotTimes();
+
+            assertThat(times).containsExactly(
+                    LocalTime.of(9, 0),
+                    LocalTime.of(11, 0),
+                    LocalTime.of(13, 0),
+                    LocalTime.of(15, 0),
+                    LocalTime.of(17, 0),
+                    LocalTime.of(19, 0)
+            );
+        }
+
+        @Test
+        @DisplayName("DELIVERY_TODAY should have 12 slot times (10:00-21:00, 1h intervals)")
+        void deliveryTodayShouldHave12SlotTimes() {
+            var times = DeliveryMode.DELIVERY_TODAY.getAvailableSlotTimes();
+
+            assertThat(times).hasSize(12);
+            assertThat(times.get(0)).isEqualTo(LocalTime.of(10, 0));
+            assertThat(times.get(11)).isEqualTo(LocalTime.of(21, 0));
+        }
+
+        @Test
+        @DisplayName("DELIVERY_ASAP should have 30 slot times (08:00-22:30, 30min intervals)")
+        void deliveryAsapShouldHave30SlotTimes() {
+            var times = DeliveryMode.DELIVERY_ASAP.getAvailableSlotTimes();
+
+            assertThat(times).hasSize(30);
+            assertThat(times.get(0)).isEqualTo(LocalTime.of(8, 0));
+            assertThat(times.get(1)).isEqualTo(LocalTime.of(8, 30));
+            assertThat(times.get(29)).isEqualTo(LocalTime.of(22, 30));
+        }
+    }
+
     private LocalDate getNextDayOfWeek(DayOfWeek dayOfWeek) {
         LocalDate date = LocalDate.now();
         while (date.getDayOfWeek() != dayOfWeek) {

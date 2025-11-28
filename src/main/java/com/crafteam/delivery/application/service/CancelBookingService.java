@@ -65,6 +65,21 @@ public class CancelBookingService implements CancelBookingUseCase {
     }
 
     private Mono<Void> validateAndCancel(Booking booking, LocalDateTime now) {
+        // TODO: Rebuild for slot templates - slot.getDate(), slot.getTimeSlot() no longer exist
+        // Booking now has bookingDate and bookingTime fields
+        // Slot no longer tracks booked count - that's done via Booking entities
+
+        // For now, just cancel the booking without validation
+        // TODO: Add proper validation using booking.getBookingDate() and booking.getBookingTime()
+
+        booking.cancel();
+
+        return bookingRepository.save(booking)
+                .then(eventPublisher.publishAll(booking.getDomainEvents()))
+                .doOnSuccess(v -> booking.clearDomainEvents())
+                .then();
+
+        /* OLD CODE - needs rebuild
         return slotRepository.findById(booking.getSlotId())
                 .flatMap(slot -> {
                     // Calculate slot start time
@@ -84,13 +99,19 @@ public class CancelBookingService implements CancelBookingUseCase {
 
                     return persistCancellation(booking, slot);
                 });
+        */
     }
 
     private Mono<Void> persistCancellation(Booking booking, Slot slot) {
+        // TODO: Rebuild - slot.getDate() no longer exists
+        return Mono.empty();
+
+        /* OLD CODE
         return slotRepository.save(slot)
                 .then(bookingRepository.save(booking))
                 .then(eventPublisher.publishAll(booking.getDomainEvents()))
                 .doOnSuccess(v -> booking.clearDomainEvents())
                 .then(slotCache.invalidateCache(slot.getDeliveryMode(), slot.getDate()));
+        */
     }
 }

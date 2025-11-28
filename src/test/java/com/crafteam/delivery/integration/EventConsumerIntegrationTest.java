@@ -103,13 +103,15 @@ class EventConsumerIntegrationTest {
         User user = registerUserUseCase.execute(userCommand).block();
         assertThat(user).isNotNull();
 
-        // Given - Create slot
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        // Given - Create slot template (Monday-Saturday, 8am-8pm, 60min slots)
         CreateSlotCommand slotCommand = new CreateSlotCommand(
                 DeliveryMode.DRIVE,
-                tomorrow,
-                LocalTime.of(10, 0),
-                LocalTime.of(11, 0),
+                java.util.List.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY,
+                        java.time.DayOfWeek.WEDNESDAY, java.time.DayOfWeek.THURSDAY,
+                        java.time.DayOfWeek.FRIDAY, java.time.DayOfWeek.SATURDAY),
+                LocalTime.of(8, 0),
+                LocalTime.of(20, 0),
+                60, // 60 minutes
                 10
         );
         Slot slot = createSlotUseCase.execute(slotCommand).block();
@@ -160,14 +162,14 @@ class EventConsumerIntegrationTest {
             assertThat(user).isNotNull();
         }
 
-        // Create 3 slots
-        LocalDate tomorrow = LocalDate.now().plusDays(1);
+        // Create 3 slot templates with different configurations
         for (int i = 0; i < 3; i++) {
             CreateSlotCommand cmd = new CreateSlotCommand(
                     DeliveryMode.DRIVE,
-                    tomorrow,
-                    LocalTime.of(10 + i, 0),
-                    LocalTime.of(11 + i, 0),
+                    java.util.List.of(java.time.DayOfWeek.MONDAY, java.time.DayOfWeek.TUESDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    60, // 60 minutes
                     10
             );
             Slot slot = createSlotUseCase.execute(cmd).block();

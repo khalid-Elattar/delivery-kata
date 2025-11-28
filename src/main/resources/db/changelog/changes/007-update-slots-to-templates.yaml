@@ -1,0 +1,114 @@
+databaseChangeLog:
+  - changeSet:
+      id: 007-update-slots-to-templates
+      author: crafteam
+      comment: "Convert slots table from specific bookings to availability templates"
+      changes:
+        # Step 1: Drop old constraints
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE slots DROP CONSTRAINT IF EXISTS chk_booked_count;
+              ALTER TABLE slots DROP CONSTRAINT IF EXISTS chk_capacity;
+              ALTER TABLE slots DROP CONSTRAINT IF EXISTS chk_time_order;
+
+        # Step 2: Drop old columns
+        - dropColumn:
+            tableName: slots
+            columnName: date
+
+        - dropColumn:
+            tableName: slots
+            columnName: booked_count
+
+        # Step 3: Add new columns for template pattern
+        - addColumn:
+            tableName: slots
+            columns:
+              - column:
+                  name: available_days
+                  type: varchar(100)
+                  constraints:
+                    nullable: false
+                  defaultValue: "MONDAY,TUESDAY,WEDNESDAY,THURSDAY,FRIDAY"
+              - column:
+                  name: slot_duration
+                  type: integer
+                  constraints:
+                    nullable: false
+                  defaultValueNumeric: 60
+
+        # Step 4: Add new constraints
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE slots ADD CONSTRAINT chk_capacity CHECK (capacity > 0);
+              ALTER TABLE slots ADD CONSTRAINT chk_slot_duration CHECK (slot_duration > 0);
+              ALTER TABLE slots ADD CONSTRAINT chk_time_order CHECK (end_time > start_time);
+
+        # Step 5: Add unique constraint on delivery_mode (one template per mode)
+        - addUniqueConstraint:
+            tableName: slots
+            columnNames: delivery_mode
+            constraintName: uk_slots_delivery_mode
+
+        # Step 6: Ensure bookings table has the required columns (already done in 006)
+        # But add unique constraint for user bookings
+        - sql:
+            dbms: postgresql
+            sql: >
+              ALTER TABLE bookings
+              ADD CONSTRAINT uk_booking_user_slot_datetime
+              UNIQUE (slot_id, user_id, booking_date, booking_time);
+
+        # Step 7: Add index on booking_date and booking_time for performance
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_slot_date_time
+            columns:
+              - column:
+                  name: slot_id
+              - column:
+                  name: booking_date
+              - column:
+                  name: booking_time
+
+        # Step 8: Add index on user_id and status for active bookings query
+        - createIndex:
+            tableName: bookings
+            indexName: idx_bookings_user_status
+            columns:
+              - column:
+                  name: user_id
+              - column:
+                  name: status
+
+      rollback:
+        - dropUniqueConstraint:
+            tableName: slots
+            constraintName: uk_slots_delivery_mode
+        - dropUniqueConstraint:
+            tableName: bookings
+            constraintName: uk_booking_user_slot_datetime
+        - dropIndex:
+            tableName: bookings
+            indexName: idx_bookings_slot_date_time
+        - dropIndex:
+            tableName: bookings
+            indexName: idx_bookings_user_status
+        - dropColumn:
+            tableName: slots
+            columnName: available_days
+        - dropColumn:
+            tableName: slots
+            columnName: slot_duration
+        - addColumn:
+            tableName: slots
+            columns:
+              - column:
+                  name: date
+                  type: date
+              - column:
+                  name: booked_count
+                  type: integer
+                  defaultValueNumeric: 0

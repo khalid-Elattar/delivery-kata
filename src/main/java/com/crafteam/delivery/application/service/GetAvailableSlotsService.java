@@ -32,18 +32,15 @@ public class GetAvailableSlotsService implements GetAvailableSlotsUseCase {
     public Flux<Slot> execute(DeliveryMode mode, LocalDate date) {
         log.debug("Getting available slots: mode={}, date={}", mode, date);
 
-        // Try cache first
-        return slotCache.getCachedSlots(mode, date)
-                .switchIfEmpty(
-                        slotRepository.findAvailableByDeliveryModeAndDate(mode, date)
-                                .collectList()
-                                .flatMapMany(slots -> {
-                                    // Cache the results
-                                    return slotCache.cacheSlots(mode, date, Flux.fromIterable(slots))
-                                            .thenMany(Flux.fromIterable(slots));
-                                })
-                )
-                .filter(Slot::isAvailable);
+        // TODO: Rebuild this service to work with slot templates
+        // Slot is now a TEMPLATE, not a specific date/time instance
+        // Need to:
+        // 1. Find slot templates matching the delivery mode
+        // 2. Check if the requested date's day-of-week is available
+        // 3. Query Booking repository to check capacity for each time slot
+        // 4. Return only slots with remaining capacity
+
+        return Flux.empty(); // Temporary - service needs complete rebuild
     }
 
     @Override

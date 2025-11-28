@@ -1,17 +1,14 @@
 package com.crafteam.delivery.domain.model.slot;
 
-import com.crafteam.delivery.domain.event.SlotBookedEvent;
 import com.crafteam.delivery.domain.event.SlotCreatedEvent;
-import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
-import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.user.UserId;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.time.DayOfWeek;
-import java.time.LocalDate;
+import java.time.Duration;
 import java.time.LocalTime;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -23,25 +20,28 @@ class SlotTest {
     class Creation {
 
         @Test
-        @DisplayName("should create slot with valid parameters")
+        @DisplayName("should create slot template with valid parameters")
         void shouldCreateSlotWithValidParameters() {
             // Given
             DeliveryMode mode = DeliveryMode.DRIVE;
-            LocalDate date = getNextValidDate(mode);
-            TimeSlot timeSlot = new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0));
-            int capacity = 5;
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY, DayOfWeek.WEDNESDAY,
+                    DayOfWeek.THURSDAY, DayOfWeek.FRIDAY, DayOfWeek.SATURDAY);
+            LocalTime startTime = LocalTime.of(8, 0);
+            LocalTime endTime = LocalTime.of(20, 0);
+            Duration slotDuration = Duration.ofMinutes(60);
+            int capacity = 10;
 
             // When
-            Slot slot = Slot.create(mode, date, timeSlot, capacity);
+            Slot slot = Slot.create(mode, availableDays, startTime, endTime, slotDuration, capacity);
 
             // Then
             assertThat(slot.getId()).isNotNull();
             assertThat(slot.getDeliveryMode()).isEqualTo(mode);
-            assertThat(slot.getDate()).isEqualTo(date);
-            assertThat(slot.getTimeSlot()).isEqualTo(timeSlot);
+            assertThat(slot.getAvailableDays()).isEqualTo(availableDays);
+            assertThat(slot.getStartTime()).isEqualTo(startTime);
+            assertThat(slot.getEndTime()).isEqualTo(endTime);
+            assertThat(slot.getSlotDuration()).isEqualTo(slotDuration);
             assertThat(slot.getCapacity()).isEqualTo(capacity);
-            assertThat(slot.getBookedCount()).isZero();
-            assertThat(slot.isAvailable()).isTrue();
         }
 
         @Test
@@ -49,11 +49,13 @@ class SlotTest {
         void shouldEmitSlotCreatedEventOnCreation() {
             // Given
             DeliveryMode mode = DeliveryMode.DRIVE;
-            LocalDate date = getNextValidDate(mode);
-            TimeSlot timeSlot = new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0));
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY, DayOfWeek.TUESDAY);
+            LocalTime startTime = LocalTime.of(9, 0);
+            LocalTime endTime = LocalTime.of(17, 0);
+            Duration slotDuration = Duration.ofMinutes(60);
 
             // When
-            Slot slot = Slot.create(mode, date, timeSlot, 5);
+            Slot slot = Slot.create(mode, availableDays, startTime, endTime, slotDuration, 5);
 
             // Then
             assertThat(slot.getDomainEvents()).hasSize(1);
@@ -61,6 +63,7 @@ class SlotTest {
             SlotCreatedEvent event = (SlotCreatedEvent) slot.getDomainEvents().get(0);
             assertThat(event.slotId()).isEqualTo(slot.getId());
             assertThat(event.deliveryMode()).isEqualTo(mode);
+            assertThat(event.availableDays()).isEqualTo(availableDays);
         }
 
         @Test
@@ -68,157 +71,237 @@ class SlotTest {
         void shouldThrowExceptionForInvalidCapacity() {
             // Given
             DeliveryMode mode = DeliveryMode.DRIVE;
-            LocalDate date = getNextValidDate(mode);
-            TimeSlot timeSlot = new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0));
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY);
+            LocalTime startTime = LocalTime.of(9, 0);
+            LocalTime endTime = LocalTime.of(17, 0);
+            Duration slotDuration = Duration.ofMinutes(60);
 
             // When/Then
-            assertThatThrownBy(() -> Slot.create(mode, date, timeSlot, 0))
+            assertThatThrownBy(() -> Slot.create(mode, availableDays, startTime, endTime, slotDuration, 0))
                     .isInstanceOf(IllegalArgumentException.class)
                     .hasMessage("Capacity must be positive");
         }
 
         @Test
-        @DisplayName("should throw exception for date not available for delivery mode")
-        void shouldThrowExceptionForInvalidDate() {
-            // Given - Sunday is not available for DELIVERY mode
-            DeliveryMode mode = DeliveryMode.DELIVERY;
-            LocalDate sunday = getNextSunday();
-            TimeSlot timeSlot = new TimeSlot(LocalTime.of(9, 0), LocalTime.of(11, 0));
+        @DisplayName("should throw exception for empty available days")
+        void shouldThrowExceptionForEmptyAvailableDays() {
+            // Given
+            DeliveryMode mode = DeliveryMode.DRIVE;
+            Set<DayOfWeek> emptyDays = Set.of();
+            LocalTime startTime = LocalTime.of(9, 0);
+            LocalTime endTime = LocalTime.of(17, 0);
+            Duration slotDuration = Duration.ofMinutes(60);
 
             // When/Then
-            assertThatThrownBy(() -> Slot.create(mode, sunday, timeSlot, 5))
+            assertThatThrownBy(() -> Slot.create(mode, emptyDays, startTime, endTime, slotDuration, 5))
                     .isInstanceOf(IllegalArgumentException.class)
-                    .hasMessageContaining("is not available for delivery mode");
+                    .hasMessage("At least one available day is required");
+        }
+
+        @Test
+        @DisplayName("should throw exception for invalid time range")
+        void shouldThrowExceptionForInvalidTimeRange() {
+            // Given
+            DeliveryMode mode = DeliveryMode.DRIVE;
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY);
+            LocalTime startTime = LocalTime.of(17, 0);
+            LocalTime endTime = LocalTime.of(9, 0); // End before start
+            Duration slotDuration = Duration.ofMinutes(60);
+
+            // When/Then
+            assertThatThrownBy(() -> Slot.create(mode, availableDays, startTime, endTime, slotDuration, 5))
+                    .isInstanceOf(IllegalArgumentException.class)
+                    .hasMessage("Start time must be before end time");
         }
     }
 
     @Nested
-    @DisplayName("Booking")
-    class BookingTests {
+    @DisplayName("Day Availability")
+    class DayAvailabilityTests {
 
         @Test
-        @DisplayName("should book slot successfully")
-        void shouldBookSlotSuccessfully() {
+        @DisplayName("should return true for available day")
+        void shouldReturnTrueForAvailableDay() {
             // Given
-            Slot slot = createValidSlot(5);
-            UserId userId = UserId.generate();
-            slot.clearDomainEvents(); // Clear creation event
-
-            // When
-            Booking booking = slot.book(userId);
-
-            // Then
-            assertThat(booking).isNotNull();
-            assertThat(booking.getSlotId()).isEqualTo(slot.getId());
-            assertThat(booking.getUserId()).isEqualTo(userId);
-            assertThat(slot.getBookedCount()).isEqualTo(1);
-            assertThat(slot.remainingCapacity()).isEqualTo(4);
-        }
-
-        @Test
-        @DisplayName("should emit SlotBookedEvent on booking")
-        void shouldEmitSlotBookedEventOnBooking() {
-            // Given
-            Slot slot = createValidSlot(5);
-            UserId userId = UserId.generate();
-            slot.clearDomainEvents();
-
-            // When
-            Booking booking = slot.book(userId);
-
-            // Then
-            assertThat(slot.getDomainEvents()).hasSize(1);
-            assertThat(slot.getDomainEvents().get(0)).isInstanceOf(SlotBookedEvent.class);
-            SlotBookedEvent event = (SlotBookedEvent) slot.getDomainEvents().get(0);
-            assertThat(event.slotId()).isEqualTo(slot.getId());
-            assertThat(event.bookingId()).isEqualTo(booking.getId());
-            assertThat(event.userId()).isEqualTo(userId);
-        }
-
-        @Test
-        @DisplayName("should throw exception when slot is fully booked")
-        void shouldThrowExceptionWhenSlotIsFullyBooked() {
-            // Given
-            Slot slot = createValidSlot(1);
-            slot.book(UserId.generate());
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+            Slot slot = Slot.create(DeliveryMode.DRIVE, availableDays,
+                    LocalTime.of(8, 0), LocalTime.of(20, 0), Duration.ofMinutes(60), 10);
 
             // When/Then
-            assertThatThrownBy(() -> slot.book(UserId.generate()))
-                    .isInstanceOf(SlotNotAvailableException.class)
-                    .hasMessageContaining("is fully booked");
+            assertThat(slot.isAvailableOn(DayOfWeek.MONDAY)).isTrue();
+            assertThat(slot.isAvailableOn(DayOfWeek.WEDNESDAY)).isTrue();
         }
 
         @Test
-        @DisplayName("should allow booking until capacity is reached")
-        void shouldAllowBookingUntilCapacityIsReached() {
+        @DisplayName("should return false for unavailable day")
+        void shouldReturnFalseForUnavailableDay() {
             // Given
-            Slot slot = createValidSlot(3);
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY);
+            Slot slot = Slot.create(DeliveryMode.DRIVE, availableDays,
+                    LocalTime.of(8, 0), LocalTime.of(20, 0), Duration.ofMinutes(60), 10);
 
-            // When
-            slot.book(UserId.generate());
-            slot.book(UserId.generate());
-            slot.book(UserId.generate());
-
-            // Then
-            assertThat(slot.isAvailable()).isFalse();
-            assertThat(slot.remainingCapacity()).isZero();
+            // When/Then
+            assertThat(slot.isAvailableOn(DayOfWeek.SUNDAY)).isFalse();
+            assertThat(slot.isAvailableOn(DayOfWeek.TUESDAY)).isFalse();
         }
     }
 
     @Nested
-    @DisplayName("Release Booking")
-    class ReleaseBookingTests {
+    @DisplayName("Time Validation")
+    class TimeValidationTests {
 
         @Test
-        @DisplayName("should release booking and increase capacity")
-        void shouldReleaseBookingAndIncreaseCapacity() {
-            // Given
-            Slot slot = createValidSlot(2);
-            slot.book(UserId.generate());
-            int bookedBefore = slot.getBookedCount();
+        @DisplayName("should validate aligned booking times")
+        void shouldValidateAlignedBookingTimes() {
+            // Given - Slot from 08:00 to 20:00 with 60min duration
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10);
 
-            // When
-            slot.releaseBooking();
-
-            // Then
-            assertThat(slot.getBookedCount()).isEqualTo(bookedBefore - 1);
-            assertThat(slot.remainingCapacity()).isEqualTo(2);
+            // When/Then - Valid times (aligned with grid)
+            assertThat(slot.isValidBookingTime(LocalTime.of(8, 0))).isTrue();
+            assertThat(slot.isValidBookingTime(LocalTime.of(9, 0))).isTrue();
+            assertThat(slot.isValidBookingTime(LocalTime.of(19, 0))).isTrue(); // Last valid slot
         }
 
         @Test
-        @DisplayName("should throw exception when no bookings to release")
-        void shouldThrowExceptionWhenNoBookingsToRelease() {
-            // Given
-            Slot slot = createValidSlot(5);
+        @DisplayName("should reject unaligned booking times")
+        void shouldRejectUnalignedBookingTimes() {
+            // Given - Slot from 08:00 to 20:00 with 60min duration
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10);
+
+            // When/Then - Invalid times (not aligned with grid)
+            assertThat(slot.isValidBookingTime(LocalTime.of(8, 30))).isFalse();
+            assertThat(slot.isValidBookingTime(LocalTime.of(9, 15))).isFalse();
+        }
+
+        @Test
+        @DisplayName("should reject times outside operating hours")
+        void shouldRejectTimesOutsideOperatingHours() {
+            // Given - Slot from 08:00 to 20:00 with 60min duration
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10);
 
             // When/Then
-            assertThatThrownBy(slot::releaseBooking)
-                    .isInstanceOf(IllegalStateException.class)
-                    .hasMessage("No bookings to release");
+            assertThat(slot.isValidBookingTime(LocalTime.of(7, 0))).isFalse(); // Before start
+            assertThat(slot.isValidBookingTime(LocalTime.of(20, 0))).isFalse(); // No room for full duration
+        }
+
+        @Test
+        @DisplayName("should get all valid booking times")
+        void shouldGetAllValidBookingTimes() {
+            // Given - Slot from 08:00 to 12:00 with 60min duration
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(12, 0),
+                    Duration.ofMinutes(60),
+                    10);
+
+            // When
+            var validTimes = slot.getValidBookingTimes();
+
+            // Then - Should return 08:00, 09:00, 10:00, 11:00 (4 slots)
+            assertThat(validTimes).containsExactly(
+                    LocalTime.of(8, 0),
+                    LocalTime.of(9, 0),
+                    LocalTime.of(10, 0),
+                    LocalTime.of(11, 0)
+            );
         }
     }
 
-    // Helper methods
-    private Slot createValidSlot(int capacity) {
-        DeliveryMode mode = DeliveryMode.DRIVE;
-        LocalDate date = getNextValidDate(mode);
-        TimeSlot timeSlot = new TimeSlot(LocalTime.of(9, 0), LocalTime.of(10, 0));
-        return Slot.create(mode, date, timeSlot, capacity);
+    @Nested
+    @DisplayName("Factory Methods")
+    class FactoryMethodsTests {
+
+        @Test
+        @DisplayName("should create slot from delivery mode defaults")
+        void shouldCreateSlotFromDeliveryModeDefaults() {
+            // When
+            Slot slot = Slot.createFromMode(DeliveryMode.DRIVE);
+
+            // Then
+            assertThat(slot.getDeliveryMode()).isEqualTo(DeliveryMode.DRIVE);
+            assertThat(slot.getAvailableDays()).isEqualTo(DeliveryMode.DRIVE.getAvailableDays());
+            assertThat(slot.getStartTime()).isEqualTo(DeliveryMode.DRIVE.getStartTime());
+            assertThat(slot.getEndTime()).isEqualTo(DeliveryMode.DRIVE.getEndTime());
+            assertThat(slot.getSlotDuration()).isEqualTo(DeliveryMode.DRIVE.getSlotDuration());
+            assertThat(slot.getCapacity()).isEqualTo(DeliveryMode.DRIVE.getDefaultCapacity());
+        }
+
+        @Test
+        @DisplayName("should reconstitute slot from persistence")
+        void shouldReconstituteSlotFromPersistence() {
+            // Given
+            SlotId id = SlotId.generate();
+            DeliveryMode mode = DeliveryMode.DRIVE;
+            Set<DayOfWeek> availableDays = Set.of(DayOfWeek.MONDAY);
+            LocalTime startTime = LocalTime.of(8, 0);
+            LocalTime endTime = LocalTime.of(20, 0);
+            Duration slotDuration = Duration.ofMinutes(60);
+            int capacity = 10;
+
+            // When
+            Slot slot = Slot.reconstitute(id, mode, availableDays, startTime, endTime, slotDuration, capacity);
+
+            // Then
+            assertThat(slot.getId()).isEqualTo(id);
+            assertThat(slot.getDeliveryMode()).isEqualTo(mode);
+            assertThat(slot.getDomainEvents()).isEmpty(); // Reconstituted slots have no events
+        }
     }
 
-    private LocalDate getNextValidDate(DeliveryMode mode) {
-        LocalDate date = LocalDate.now();
-        while (!mode.isAvailableFor(date)) {
-            date = date.plusDays(1);
-        }
-        return date;
-    }
+    @Nested
+    @DisplayName("Utility Methods")
+    class UtilityMethodsTests {
 
-    private LocalDate getNextSunday() {
-        LocalDate date = LocalDate.now();
-        while (date.getDayOfWeek() != DayOfWeek.SUNDAY) {
-            date = date.plusDays(1);
+        @Test
+        @DisplayName("should calculate end time correctly")
+        void shouldCalculateEndTimeCorrectly() {
+            // Given
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(60),
+                    10);
+
+            // When
+            LocalTime endTime = slot.calculateEndTime(LocalTime.of(10, 0));
+
+            // Then
+            assertThat(endTime).isEqualTo(LocalTime.of(11, 0));
         }
-        return date;
+
+        @Test
+        @DisplayName("should return slot duration in minutes")
+        void shouldReturnSlotDurationInMinutes() {
+            // Given
+            Slot slot = Slot.create(DeliveryMode.DRIVE,
+                    Set.of(DayOfWeek.MONDAY),
+                    LocalTime.of(8, 0),
+                    LocalTime.of(20, 0),
+                    Duration.ofMinutes(90),
+                    10);
+
+            // When
+            long durationMinutes = slot.getSlotDurationMinutes();
+
+            // Then
+            assertThat(durationMinutes).isEqualTo(90);
+        }
     }
 }

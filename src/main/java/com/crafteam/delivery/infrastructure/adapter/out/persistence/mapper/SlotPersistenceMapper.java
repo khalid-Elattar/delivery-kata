@@ -3,50 +3,76 @@ package com.crafteam.delivery.infrastructure.adapter.out.persistence.mapper;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
 import com.crafteam.delivery.domain.model.slot.SlotId;
-import com.crafteam.delivery.domain.model.slot.TimeSlot;
 import com.crafteam.delivery.infrastructure.adapter.out.persistence.entity.SlotEntity;
-import org.mapstruct.Mapper;
-import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.springframework.stereotype.Component;
 
-import java.time.LocalTime;
-import java.util.UUID;
+import java.time.DayOfWeek;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
- * MapStruct mapper for converting between Slot domain objects and SlotEntity persistence objects.
+ * Mapper for converting between Slot domain objects and SlotEntity persistence objects.
+ * Handles the new slot template structure with available days and duration.
  */
-@Mapper(componentModel = "spring")
-public interface SlotPersistenceMapper {
+@Component
+public class SlotPersistenceMapper {
 
-    @Mapping(target = "id", source = "id", qualifiedByName = "slotIdToUuid")
-    @Mapping(target = "deliveryMode", source = "deliveryMode", qualifiedByName = "deliveryModeToString")
-    @Mapping(target = "startTime", source = "timeSlot.startTime")
-    @Mapping(target = "endTime", source = "timeSlot.endTime")
-    @Mapping(target = "createdAt", ignore = true)
-    @Mapping(target = "isNew", constant = "true")
-    SlotEntity toEntity(Slot slot);
+    /**
+     * Convert domain Slot to persistence SlotEntity.
+     */
+    public SlotEntity toEntity(Slot slot) {
+        return SlotEntity.builder()
+                .id(slot.getId().value())
+                .deliveryMode(slot.getDeliveryMode().name())
+                .availableDays(daysToString(slot.getAvailableDays()))
+                .startTime(slot.getStartTime())
+                .endTime(slot.getEndTime())
+                .slotDuration((int) slot.getSlotDuration().toMinutes())
+                .capacity(slot.getCapacity())
+                .createdAt(Instant.now())
+                .isNew(true)
+                .build();
+    }
 
-    default Slot toDomain(SlotEntity entity) {
+    /**
+     * Convert persistence SlotEntity to domain Slot.
+     */
+    public Slot toDomain(SlotEntity entity) {
         if (entity == null) {
             return null;
         }
+
         return Slot.reconstitute(
                 SlotId.from(entity.getId()),
                 DeliveryMode.valueOf(entity.getDeliveryMode()),
-                entity.getDate(),
-                new TimeSlot(entity.getStartTime(), entity.getEndTime()),
-                entity.getCapacity(),
-                entity.getBookedCount()
+                stringToDays(entity.getAvailableDays()),
+                entity.getStartTime(),
+                entity.getEndTime(),
+                Duration.ofMinutes(entity.getSlotDuration()),
+                entity.getCapacity()
         );
     }
 
-    @Named("slotIdToUuid")
-    default UUID slotIdToUuid(SlotId slotId) {
-        return slotId != null ? slotId.value() : null;
+    /**
+     * Convert Set<DayOfWeek> to comma-separated string.
+     */
+    private String daysToString(Set<DayOfWeek> days) {
+        return days.stream()
+                .map(DayOfWeek::name)
+                .sorted()
+                .collect(Collectors.joining(","));
     }
 
-    @Named("deliveryModeToString")
-    default String deliveryModeToString(DeliveryMode deliveryMode) {
-        return deliveryMode != null ? deliveryMode.name() : null;
+    /**
+     * Convert comma-separated string to Set<DayOfWeek>.
+     */
+    private Set<DayOfWeek> stringToDays(String daysString) {
+        return Arrays.stream(daysString.split(","))
+                .map(String::trim)
+                .map(DayOfWeek::valueOf)
+                .collect(Collectors.toSet());
     }
 }

@@ -17,7 +17,9 @@ import reactor.core.publisher.Mono;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -100,32 +102,46 @@ public class RedisSlotCacheAdapter implements SlotCachePort {
         return KEY_PREFIX + mode.name() + ":" + date;
     }
 
+    // TODO: DISABLED - Needs rewrite for new Slot architecture
+    // The new Slot is a template (no specific date), not a bookable instance
+    // Cache strategy needs redesign:
+    // Option 1: Cache slot templates separately from booking counts
+    // Option 2: Cache computed availability (slot template + date + current bookings)
+    // Option 3: Move caching to a higher level that deals with composed data
     private String serializeSlot(Slot slot) throws JsonProcessingException {
+        // Temporary serialization for slot templates (without date/bookings)
         Map<String, Object> map = Map.of(
                 "id", slot.getId().value().toString(),
                 "deliveryMode", slot.getDeliveryMode().name(),
-                "date", slot.getDate().toString(),
-                "startTime", slot.getTimeSlot().startTime().toString(),
-                "endTime", slot.getTimeSlot().endTime().toString(),
+                "startTime", slot.getStartTime().toString(),
+                "endTime", slot.getEndTime().toString(),
+                "slotDuration", slot.getSlotDuration().toMinutes(),
                 "capacity", slot.getCapacity(),
-                "bookedCount", slot.getBookedCount()
+                "availableDays", slot.getAvailableDays().stream()
+                        .map(Enum::name)
+                        .toList()
         );
         return objectMapper.writeValueAsString(map);
     }
 
     @SuppressWarnings("unchecked")
     private Slot deserializeSlot(String json) throws JsonProcessingException {
+        // Temporary deserialization for slot templates
         Map<String, Object> map = objectMapper.readValue(json, Map.class);
+
+        List<String> dayNames = (List<String>) map.get("availableDays");
+        Set<java.time.DayOfWeek> availableDays = dayNames.stream()
+                .map(java.time.DayOfWeek::valueOf)
+                .collect(java.util.stream.Collectors.toSet());
+
         return Slot.reconstitute(
                 SlotId.from(UUID.fromString((String) map.get("id"))),
                 DeliveryMode.valueOf((String) map.get("deliveryMode")),
-                LocalDate.parse((String) map.get("date")),
-                new TimeSlot(
-                        LocalTime.parse((String) map.get("startTime")),
-                        LocalTime.parse((String) map.get("endTime"))
-                ),
-                (Integer) map.get("capacity"),
-                (Integer) map.get("bookedCount")
+                availableDays,
+                LocalTime.parse((String) map.get("startTime")),
+                LocalTime.parse((String) map.get("endTime")),
+                java.time.Duration.ofMinutes(((Number) map.get("slotDuration")).longValue()),
+                (Integer) map.get("capacity")
         );
     }
 }

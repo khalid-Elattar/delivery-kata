@@ -1,139 +1,187 @@
 package com.crafteam.delivery.domain.model.slot;
 
-import com.crafteam.delivery.domain.event.SlotBookedEvent;
 import com.crafteam.delivery.domain.event.SlotCreatedEvent;
-import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
-import com.crafteam.delivery.domain.model.booking.Booking;
 import com.crafteam.delivery.domain.model.shared.DomainEvent;
-import com.crafteam.delivery.domain.model.user.UserId;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 
 /**
- * Aggregate Root representing a delivery slot.
+ * Aggregate Root representing a delivery slot availability template.
+ *
+ * This is NOT a specific booking slot for a specific date.
+ * Instead, it defines WHEN a delivery mode is available (rules/template).
+ *
+ * Example:
+ * - DRIVE is available Monday-Saturday, 08:00-20:00, 60min slots, capacity 10
+ * - When a user books DRIVE for Monday 2025-12-01 at 10:00, the booking
+ *   references this template and specifies the date/time
  *
  * Invariants:
- * - bookedCount <= capacity
- * - date must be valid for the delivery mode
+ * - availableDays must not be empty
+ * - startTime must be before endTime
+ * - slotDuration must be positive
  * - capacity must be positive
  */
 public class Slot {
 
     private final SlotId id;
     private final DeliveryMode deliveryMode;
-    private final LocalDate date;
-    private final TimeSlot timeSlot;
-    private final int capacity;
-    private int bookedCount;
+    private final Set<DayOfWeek> availableDays;
+    private final LocalTime startTime;      // Operating hours start (e.g., 08:00)
+    private final LocalTime endTime;        // Operating hours end (e.g., 20:00)
+    private final Duration slotDuration;    // Duration per booking (e.g., 60 min)
+    private final int capacity;             // Max bookings per time slot per day
 
     private final List<DomainEvent> domainEvents = new ArrayList<>();
 
     // Private constructor - use factory methods
-    private Slot(SlotId id, DeliveryMode deliveryMode, LocalDate date,
-                 TimeSlot timeSlot, int capacity, int bookedCount) {
+    private Slot(SlotId id, DeliveryMode deliveryMode, Set<DayOfWeek> availableDays,
+                 LocalTime startTime, LocalTime endTime, Duration slotDuration, int capacity) {
         this.id = id;
         this.deliveryMode = deliveryMode;
-        this.date = date;
-        this.timeSlot = timeSlot;
+        this.availableDays = availableDays;
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.slotDuration = slotDuration;
         this.capacity = capacity;
-        this.bookedCount = bookedCount;
     }
 
     /**
-     * Factory method for creating a new slot.
+     * Factory method for creating a new slot template.
      */
-    public static Slot create(DeliveryMode deliveryMode, LocalDate date,
-                              TimeSlot timeSlot, int capacity) {
+    public static Slot create(DeliveryMode deliveryMode, Set<DayOfWeek> availableDays,
+                              LocalTime startTime, LocalTime endTime,
+                              Duration slotDuration, int capacity) {
         Objects.requireNonNull(deliveryMode, "Delivery mode is required");
-        Objects.requireNonNull(date, "Date is required");
-        Objects.requireNonNull(timeSlot, "Time slot is required");
+        Objects.requireNonNull(availableDays, "Available days is required");
+        Objects.requireNonNull(startTime, "Start time is required");
+        Objects.requireNonNull(endTime, "End time is required");
+        Objects.requireNonNull(slotDuration, "Slot duration is required");
+
+        if (availableDays.isEmpty()) {
+            throw new IllegalArgumentException("At least one available day is required");
+        }
+
+        if (!startTime.isBefore(endTime)) {
+            throw new IllegalArgumentException("Start time must be before end time");
+        }
+
+        if (slotDuration.isZero() || slotDuration.isNegative()) {
+            throw new IllegalArgumentException("Slot duration must be positive");
+        }
 
         if (capacity <= 0) {
             throw new IllegalArgumentException("Capacity must be positive");
         }
 
-        if (!deliveryMode.isAvailableFor(date)) {
-            throw new IllegalArgumentException(
-                    "Date %s is not available for delivery mode %s".formatted(date, deliveryMode)
-            );
-        }
-
-        Slot slot = new Slot(SlotId.generate(), deliveryMode, date, timeSlot, capacity, 0);
+        Slot slot = new Slot(SlotId.generate(), deliveryMode, availableDays,
+                startTime, endTime, slotDuration, capacity);
 
         slot.domainEvents.add(new SlotCreatedEvent(
-                slot.id, deliveryMode, date, timeSlot, capacity, Instant.now()
+                slot.id, deliveryMode, availableDays, startTime, endTime, capacity, Instant.now()
         ));
 
         return slot;
     }
 
     /**
+     * Convenient factory method using DeliveryMode defaults.
+     */
+    public static Slot createFromMode(DeliveryMode mode) {
+        return create(
+                mode,
+                mode.getAvailableDays(),
+                mode.getStartTime(),
+                mode.getEndTime(),
+                mode.getSlotDuration(),
+                mode.getDefaultCapacity()
+        );
+    }
+
+    /**
      * Factory method for reconstituting from persistence.
      */
-    public static Slot reconstitute(SlotId id, DeliveryMode deliveryMode, LocalDate date,
-                                    TimeSlot timeSlot, int capacity, int bookedCount) {
-        return new Slot(id, deliveryMode, date, timeSlot, capacity, bookedCount);
+    public static Slot reconstitute(SlotId id, DeliveryMode deliveryMode,
+                                    Set<DayOfWeek> availableDays,
+                                    LocalTime startTime, LocalTime endTime,
+                                    Duration slotDuration, int capacity) {
+        return new Slot(id, deliveryMode, availableDays, startTime, endTime, slotDuration, capacity);
     }
 
     // ========== BUSINESS METHODS ==========
 
     /**
-     * Checks if the slot has available capacity.
+     * Check if booking is allowed on this day of week.
      */
-    public boolean isAvailable() {
-        return bookedCount < capacity;
+    public boolean isAvailableOn(DayOfWeek day) {
+        return availableDays.contains(day);
     }
 
     /**
-     * Returns the remaining capacity.
+     * Check if booking time is valid for this slot template.
+     *
+     * Validates:
+     * 1. Time must be >= startTime
+     * 2. Time must allow full duration before endTime
+     * 3. Time must align with slot grid (be a multiple of slotDuration from startTime)
      */
-    public int remainingCapacity() {
-        return capacity - bookedCount;
-    }
-
-    /**
-     * Books this slot for a user.
-     * @param userId The user making the booking
-     * @return The created booking
-     * @throws SlotNotAvailableException if the slot is fully booked
-     */
-    public Booking book(UserId userId) {
-        Objects.requireNonNull(userId, "User ID is required");
-
-        if (!isAvailable()) {
-            throw new SlotNotAvailableException(
-                    "Slot %s is fully booked (%d/%d)".formatted(id, bookedCount, capacity)
-            );
+    public boolean isValidBookingTime(LocalTime bookingTime) {
+        // 1. Must be >= startTime
+        if (bookingTime.isBefore(startTime)) {
+            return false;
         }
 
-        bookedCount++;
+        // 2. Must allow full duration before endTime
+        LocalTime bookingEndTime = bookingTime.plus(slotDuration);
+        if (bookingEndTime.isAfter(endTime)) {
+            return false;
+        }
 
-        Booking booking = Booking.create(this.id, userId);
+        // 3. Must align with slot grid
+        long minutesSinceStart = Duration.between(startTime, bookingTime).toMinutes();
+        long slotMinutes = slotDuration.toMinutes();
 
-        domainEvents.add(new SlotBookedEvent(
-                this.id,
-                booking.getId(),
-                userId,
-                this.remainingCapacity(),
-                Instant.now()
-        ));
-
-        return booking;
+        return minutesSinceStart % slotMinutes == 0;
     }
 
     /**
-     * Releases a booking, incrementing available capacity.
+     * Get all valid booking times for this slot template.
+     * Returns list of slot start times that align with the grid.
+     *
+     * Example: DRIVE (08:00-20:00, 60min) returns [08:00, 09:00, ..., 19:00]
      */
-    public void releaseBooking() {
-        if (bookedCount <= 0) {
-            throw new IllegalStateException("No bookings to release");
+    public List<LocalTime> getValidBookingTimes() {
+        List<LocalTime> times = new ArrayList<>();
+        LocalTime current = startTime;
+
+        while (current.plus(slotDuration).compareTo(endTime) <= 0) {
+            times.add(current);
+            current = current.plus(slotDuration);
         }
-        bookedCount--;
+
+        return times;
+    }
+
+    /**
+     * Calculate end time for a booking starting at the given time.
+     */
+    public LocalTime calculateEndTime(LocalTime bookingTime) {
+        return bookingTime.plus(slotDuration);
+    }
+
+    /**
+     * Get the duration in minutes.
+     */
+    public long getSlotDurationMinutes() {
+        return slotDuration.toMinutes();
     }
 
     // ========== EVENT HANDLING ==========
@@ -156,20 +204,24 @@ public class Slot {
         return deliveryMode;
     }
 
-    public LocalDate getDate() {
-        return date;
+    public Set<DayOfWeek> getAvailableDays() {
+        return Collections.unmodifiableSet(availableDays);
     }
 
-    public TimeSlot getTimeSlot() {
-        return timeSlot;
+    public LocalTime getStartTime() {
+        return startTime;
+    }
+
+    public LocalTime getEndTime() {
+        return endTime;
+    }
+
+    public Duration getSlotDuration() {
+        return slotDuration;
     }
 
     public int getCapacity() {
         return capacity;
-    }
-
-    public int getBookedCount() {
-        return bookedCount;
     }
 
     // ========== EQUALITY (by ID) ==========
@@ -188,7 +240,8 @@ public class Slot {
 
     @Override
     public String toString() {
-        return "Slot{id=%s, deliveryMode=%s, date=%s, timeSlot=%s, capacity=%d, bookedCount=%d}"
-                .formatted(id, deliveryMode, date, timeSlot.formatted(), capacity, bookedCount);
+        return "Slot{id=%s, deliveryMode=%s, days=%s, time=%s-%s, duration=%dmin, capacity=%d}"
+                .formatted(id, deliveryMode, availableDays, startTime, endTime,
+                        slotDuration.toMinutes(), capacity);
     }
 }

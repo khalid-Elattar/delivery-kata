@@ -2,21 +2,17 @@ package com.crafteam.delivery.interfaces.rest.dto.response;
 
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 
-import java.time.LocalDate;
+import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.Set;
+import java.util.UUID;
 
-/**
- * Response DTO for slot data.
- */
 public record SlotResponse(
-        String id,
+        UUID id,
         DeliveryMode deliveryMode,
-        LocalDate date,
+        Set<DayOfWeek> availableDays,
         LocalTime startTime,
         LocalTime endTime,
-        int capacity,
-        int bookedCount,
-        int remainingCapacity,
-        boolean available
-) {
-}
+        int slotDurationMinutes,
+        int capacity
+) {}

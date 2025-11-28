@@ -9,6 +9,7 @@ import com.crafteam.delivery.application.port.in.BookSlotUseCase;
 import com.crafteam.delivery.application.port.in.BookSlotWithSuggestionsUseCase;
 import com.crafteam.delivery.application.port.in.CancelBookingUseCase;
 import com.crafteam.delivery.application.port.in.GetBookingUseCase;
+import com.crafteam.delivery.infrastructure.security.CustomUserDetails;
 import com.crafteam.delivery.interfaces.rest.dto.request.AcceptSuggestionRequest;
 import com.crafteam.delivery.interfaces.rest.dto.request.BookSlotRequest;
 import com.crafteam.delivery.interfaces.rest.dto.response.BookingResponse;
@@ -23,6 +24,7 @@ import org.springframework.hateoas.EntityModel;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.ReactiveSecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
@@ -59,7 +61,7 @@ public class BookingController {
         this.bookingModelAssembler = bookingModelAssembler;
     }
 
-    @PostMapping(produces = MediaType.APPLICATION_JSON_VALUE)
+    @PostMapping(produces = "application/hal+json")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(
             summary = "Book a delivery slot",
@@ -70,9 +72,24 @@ public class BookingController {
     @ApiResponse(responseCode = "404", description = "Slot not found")
     @ApiResponse(responseCode = "409", description = "Slot not available")
     public Mono<EntityModel<BookingResponse>> bookSlot(@Valid @RequestBody BookSlotRequest request) {
-        return bookSlotUseCase.execute(bookingWebMapper.toCommand(request))
-                .map(bookingWebMapper::toResponse)
-                .map(bookingModelAssembler::toModel);
+        // Extract userId from reactive security context
+        return ReactiveSecurityContextHolder.getContext()
+                .map(securityContext -> {
+                    CustomUserDetails userDetails = (CustomUserDetails) securityContext.getAuthentication().getPrincipal();
+                    return userDetails.getUserId();
+                })
+                .flatMap(userId -> {
+                    BookSlotRequest requestWithUserId = new BookSlotRequest(
+                            request.slotId(),
+                            userId,
+                            request.deliveryMode(),
+                            request.date(),
+                            request.time()
+                    );
+                    return bookSlotUseCase.execute(bookingWebMapper.toCommand(requestWithUserId))
+                            .map(bookingWebMapper::toResponse)
+                            .map(bookingModelAssembler::toModel);
+                });
     }
 
     @PostMapping(value = "/with-suggestions", produces = MediaType.APPLICATION_JSON_VALUE)
@@ -128,7 +145,7 @@ public class BookingController {
         };
     }
 
-    @GetMapping(value = "/{bookingId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/{bookingId}", produces = "application/hal+json")
     @Operation(summary = "Get booking by ID", description = "Retrieves a specific booking with HATEOAS links")
     @ApiResponse(responseCode = "200", description = "Booking found")
     @ApiResponse(responseCode = "404", description = "Booking not found")
@@ -138,7 +155,7 @@ public class BookingController {
                 .map(bookingModelAssembler::toModel);
     }
 
-    @GetMapping(value = "/user/{userId}", produces = MediaType.APPLICATION_JSON_VALUE)
+    @GetMapping(value = "/user/{userId}", produces = "application/hal+json")
     @Operation(summary = "Get bookings by user", description = "Retrieves all bookings for a user with HATEOAS links")
     public Flux<EntityModel<BookingResponse>> getUserBookings(@PathVariable String userId) {
         return getBookingUseCase.findByUserId(userId)

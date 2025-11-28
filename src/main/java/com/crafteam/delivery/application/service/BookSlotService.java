@@ -4,13 +4,14 @@ import com.crafteam.delivery.application.dto.command.BookSlotCommand;
 import com.crafteam.delivery.application.port.in.BookSlotUseCase;
 import com.crafteam.delivery.application.port.out.BookingRepository;
 import com.crafteam.delivery.application.port.out.EventPublisher;
-import com.crafteam.delivery.application.port.out.SlotCachePort;
 import com.crafteam.delivery.application.port.out.SlotRepository;
+import com.crafteam.delivery.domain.exception.MaxActiveBookingsException;
+import com.crafteam.delivery.domain.exception.SlotNotAvailableException;
 import com.crafteam.delivery.domain.exception.SlotNotFoundException;
+import com.crafteam.delivery.domain.exception.UserAlreadyBookedException;
 import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.BookingStatus;
+import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
-import com.crafteam.delivery.domain.model.slot.SlotId;
 import com.crafteam.delivery.domain.model.user.UserId;
 import com.crafteam.delivery.domain.service.BookingValidator;
 import org.slf4j.Logger;
@@ -19,87 +20,155 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import reactor.core.publisher.Mono;
 
-import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.util.List;
+import java.time.LocalTime;
 
 /**
  * Application service for booking delivery slots.
- * Validates all business rules before creating a booking.
+ * Uses the new slot template architecture.
  */
 @Service
 @Transactional
 public class BookSlotService implements BookSlotUseCase {
 
     private static final Logger log = LoggerFactory.getLogger(BookSlotService.class);
+    private static final int MAX_ACTIVE_BOOKINGS = 3;
 
     private final SlotRepository slotRepository;
     private final BookingRepository bookingRepository;
     private final EventPublisher eventPublisher;
-    private final SlotCachePort slotCache;
     private final BookingValidator bookingValidator;
-    private final Clock clock;
 
     public BookSlotService(SlotRepository slotRepository,
                            BookingRepository bookingRepository,
                            EventPublisher eventPublisher,
-                           SlotCachePort slotCache,
-                           BookingValidator bookingValidator,
-                           Clock clock) {
+                           BookingValidator bookingValidator) {
         this.slotRepository = slotRepository;
         this.bookingRepository = bookingRepository;
         this.eventPublisher = eventPublisher;
-        this.slotCache = slotCache;
         this.bookingValidator = bookingValidator;
-        this.clock = clock;
     }
 
     @Override
     public Mono<Booking> execute(BookSlotCommand command) {
-        log.info("Booking slot: slotId={}, userId={}",
-                command.slotId(), command.userId());
+        DeliveryMode mode = command.deliveryMode();
+        LocalDate bookingDate = command.date();
+        LocalTime bookingTime = command.time();
+        String userId = command.userId();
+        LocalDateTime now = LocalDateTime.now();
 
-        SlotId slotId = SlotId.from(command.slotId());
-        UserId userId = UserId.from(command.userId());
-        LocalDateTime now = LocalDateTime.now(clock);
+        log.info("Booking request: mode={}, date={}, time={}, userId={}",
+                mode, bookingDate, bookingTime, userId);
 
-        return slotRepository.findById(slotId)
-                .switchIfEmpty(Mono.error(new SlotNotFoundException(command.slotId())))
-                .flatMap(slot -> validateAndBook(slot, userId, now));
+        // 1. Find the slot template for this delivery mode
+        return slotRepository.findByDeliveryMode(mode)
+                .switchIfEmpty(Mono.error(new SlotNotFoundException(
+                        String.format("No slot template found for mode: %s", mode)
+                )))
+
+                // 2. Validate all business rules
+                .doOnNext(slot -> {
+                    log.debug("Found slot template: {}", slot);
+                    bookingValidator.validate(slot, bookingDate, bookingTime, now);
+                })
+
+                // 3. Check capacity and create booking
+                .flatMap(slot -> checkCapacityAndBook(slot, bookingDate, bookingTime, userId));
     }
 
-    private Mono<Booking> validateAndBook(Slot slot, UserId userId, LocalDateTime now) {
-        // Fetch existing bookings for validation
-        Mono<List<Booking>> slotBookingsMono = bookingRepository.findBySlotId(slot.getId())
-                .collectList();
-        Mono<List<Booking>> userBookingsMono = bookingRepository.findByUserId(userId)
-                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
-                .collectList();
+    /**
+     * Check capacity for the specific date/time and create booking if available.
+     */
+    private Mono<Booking> checkCapacityAndBook(Slot slot, LocalDate date, LocalTime time, String userId) {
+        // Count existing bookings for this slot template + specific date/time
+        return bookingRepository.countBySlotIdAndDateAndTime(slot.getId(), date, time)
+                .flatMap(currentBookings -> {
+                    log.debug("Current bookings for {}/{}/{}: {}/{}",
+                            slot.getDeliveryMode(), date, time, currentBookings, slot.getCapacity());
 
-        return Mono.zip(slotBookingsMono, userBookingsMono)
-                .flatMap(tuple -> {
-                    List<Booking> slotBookings = tuple.getT1();
-                    List<Booking> userBookings = tuple.getT2();
+                    // Check capacity
+                    if (currentBookings >= slot.getCapacity()) {
+                        log.info("Slot is full: {}/{} bookings", currentBookings, slot.getCapacity());
+                        return Mono.error(new SlotNotAvailableException(
+                                String.format("Slot is fully booked (%d/%d)",
+                                        currentBookings, slot.getCapacity())
+                        ));
+                    }
 
-                    // Validate all business rules
-                    bookingValidator.validateBooking(slot, userId, slotBookings, userBookings, now);
-
-                    // Create the booking
-                    Booking booking = slot.book(userId);
-
-                    // Persist both slot and booking
-                    return slotRepository.save(slot)
-                            .then(bookingRepository.save(booking))
-                            .flatMap(savedBooking ->
-                                    eventPublisher.publishAll(slot.getDomainEvents())
-                                            .doOnSuccess(v -> slot.clearDomainEvents())
-                                            .thenReturn(savedBooking)
+                    // Check user hasn't already booked this slot/date/time
+                    return bookingRepository.existsBySlotIdAndUserIdAndDateAndTime(
+                                    slot.getId(), UserId.from(userId), date, time
                             )
-                            .flatMap(savedBooking ->
-                                    slotCache.invalidateCache(slot.getDeliveryMode(), slot.getDate())
-                                            .thenReturn(savedBooking)
-                            );
+                            .flatMap(alreadyBooked -> {
+                                if (alreadyBooked) {
+                                    log.info("User {} already has a booking for {}/{}/{}",
+                                            userId, slot.getId(), date, time);
+                                    return Mono.error(new UserAlreadyBookedException(
+                                            UserId.from(userId), slot.getId()
+                                    ));
+                                }
+
+                                // Check user's total active bookings
+                                return checkUserBookingLimitAndCreate(slot, date, time, userId);
+                            });
+                });
+    }
+
+    /**
+     * Check user's active bookings limit and create booking.
+     */
+    private Mono<Booking> checkUserBookingLimitAndCreate(Slot slot, LocalDate date,
+                                                          LocalTime time, String userId) {
+        return bookingRepository.countActiveByUserId(UserId.from(userId))
+                .flatMap(activeCount -> {
+                    log.debug("User {} has {} active bookings", userId, activeCount);
+
+                    // RG08: Maximum 3 active bookings per user
+                    if (activeCount >= MAX_ACTIVE_BOOKINGS) {
+                        log.info("User {} has reached max active bookings: {}/{}",
+                                userId, activeCount, MAX_ACTIVE_BOOKINGS);
+                        return Mono.error(new MaxActiveBookingsException(
+                                UserId.from(userId), activeCount.intValue(), MAX_ACTIVE_BOOKINGS
+                        ));
+                    }
+
+                    return createBooking(slot, date, time, userId);
+                });
+    }
+
+    /**
+     * Create and save the booking.
+     */
+    private Mono<Booking> createBooking(Slot slot, LocalDate date, LocalTime time, String userId) {
+        LocalTime endTime = slot.calculateEndTime(time);
+
+        log.info("Creating booking: mode={}, date={}, time={}-{}, userId={}",
+                slot.getDeliveryMode(), date, time, endTime, userId);
+
+        // Create booking domain object
+        Booking booking = Booking.create(
+                slot.getId(),
+                UserId.from(userId),
+                date,
+                time
+        );
+
+        // Confirm the booking (state transition)
+        booking.confirm();
+
+        // Save and publish events
+        return bookingRepository.save(booking)
+                .doOnSuccess(saved -> {
+                    log.info("Booking created successfully: id={}, slotId={}, date={}, time={}-{}",
+                            saved.getId(), slot.getId(), date, time, endTime);
+
+                    // Publish domain events
+                    if (!booking.getDomainEvents().isEmpty()) {
+                        eventPublisher.publishAll(booking.getDomainEvents()).subscribe();
+                        booking.clearDomainEvents();
+                    }
                 })
-                .doOnSuccess(b -> log.info("Booking created: {}", b.getId()));
+                .doOnError(error -> log.error("Failed to create booking", error));
     }
 }

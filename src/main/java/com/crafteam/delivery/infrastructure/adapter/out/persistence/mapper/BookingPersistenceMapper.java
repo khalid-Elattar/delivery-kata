@@ -36,7 +36,9 @@ public interface BookingPersistenceMapper {
                 BookingStatus.valueOf(entity.getStatus()),
                 entity.getCreatedAt(),
                 entity.getConfirmedAt(),
-                entity.getCancelledAt()
+                entity.getCancelledAt(),
+                entity.getBookingDate(),
+                entity.getBookingTime()
         );
     }
 

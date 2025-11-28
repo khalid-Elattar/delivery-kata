@@ -66,10 +66,9 @@ public class BookingEventConsumer {
 
         try {
             // 1. Invalidate slot cache to reflect updated availability
-            slotRepository.findById(event.slotId())
-                    .flatMap(slot -> slotCachePort.invalidateCache(slot.getDeliveryMode(), slot.getDate()))
-                    .doOnSuccess(v -> log.debug("Cache invalidated for slot: {}", event.slotId()))
-                    .doOnError(e -> log.warn("Failed to invalidate cache for slot: {}", event.slotId(), e))
+            slotCachePort.invalidateAll()
+                    .doOnSuccess(v -> log.debug("Cache invalidated for booking: {}", event.bookingId()))
+                    .doOnError(e -> log.warn("Failed to invalidate cache for booking: {}", event.bookingId(), e))
                     .onErrorResume(e -> reactor.core.publisher.Mono.empty()) // Don't fail event processing if cache fails
                     .block(); // Block is acceptable in Kafka listener (separate thread pool)
 
@@ -129,10 +128,9 @@ public class BookingEventConsumer {
 
         try {
             // 1. Invalidate slot cache to reflect restored availability
-            slotRepository.findById(event.slotId())
-                    .flatMap(slot -> slotCachePort.invalidateCache(slot.getDeliveryMode(), slot.getDate()))
-                    .doOnSuccess(v -> log.debug("Cache invalidated after cancellation for slot: {}", event.slotId()))
-                    .doOnError(e -> log.warn("Failed to invalidate cache for slot: {}", event.slotId(), e))
+            slotCachePort.invalidateAll()
+                    .doOnSuccess(v -> log.debug("Cache invalidated after cancellation for booking: {}", event.bookingId()))
+                    .doOnError(e -> log.warn("Failed to invalidate cache for booking: {}", event.bookingId(), e))
                     .onErrorResume(e -> reactor.core.publisher.Mono.empty())
                     .block(); // Block is acceptable in Kafka listener
 

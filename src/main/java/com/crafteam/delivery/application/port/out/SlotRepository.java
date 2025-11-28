@@ -6,20 +6,22 @@ import com.crafteam.delivery.domain.model.slot.SlotId;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
-import java.time.LocalDate;
-
 /**
  * Output port for slot persistence operations.
+ * Slots are now availability templates (not specific to a date).
  */
 public interface SlotRepository {
 
     Mono<Slot> findById(SlotId id);
 
-    Flux<Slot> findByDeliveryModeAndDate(DeliveryMode mode, LocalDate date);
-
-    Flux<Slot> findAvailableByDeliveryModeAndDate(DeliveryMode mode, LocalDate date);
-
-    Flux<Slot> findByDateRange(LocalDate startDate, LocalDate endDate);
+    /**
+     * Find the slot template for a specific delivery mode.
+     * There should be only one template per delivery mode.
+     *
+     * @param mode The delivery mode
+     * @return Mono of the slot template if found, empty otherwise
+     */
+    Mono<Slot> findByDeliveryMode(DeliveryMode mode);
 
     Flux<Slot> findAll();
 

@@ -73,7 +73,7 @@ public class KafkaConfig {
         producerProps.put(ProducerConfig.RETRIES_CONFIG, 3);
         producerProps.put(ProducerConfig.MAX_IN_FLIGHT_REQUESTS_PER_CONNECTION, 1);
         producerProps.put(ProducerConfig.ENABLE_IDEMPOTENCE_CONFIG, true);
-        producerProps.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, false);
+        producerProps.put(JsonSerializer.ADD_TYPE_INFO_HEADERS, true);
 
         SenderOptions<String, Object> senderOptions = SenderOptions.create(producerProps);
         return KafkaSender.create(senderOptions);
@@ -91,10 +91,10 @@ public class KafkaConfig {
         props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, bootstrapServers);
         props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class);
         props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, JsonDeserializer.class);
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "earliest");
+        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
         props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, true);
-        props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.crafteam.delivery.domain.event");
-        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, false);
+        props.put(JsonDeserializer.TRUSTED_PACKAGES, "*");
+        props.put(JsonDeserializer.USE_TYPE_INFO_HEADERS, true);
         props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.crafteam.delivery.domain.model.shared.DomainEvent");
 
         return new DefaultKafkaConsumerFactory<>(props);

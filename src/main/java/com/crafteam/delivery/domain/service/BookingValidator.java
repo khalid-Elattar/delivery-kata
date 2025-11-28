@@ -1,218 +1,191 @@
 package com.crafteam.delivery.domain.service;
 
 import com.crafteam.delivery.domain.exception.*;
-import com.crafteam.delivery.domain.model.booking.Booking;
-import com.crafteam.delivery.domain.model.booking.BookingStatus;
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 import com.crafteam.delivery.domain.model.slot.Slot;
-import com.crafteam.delivery.domain.model.user.UserId;
+import org.springframework.stereotype.Component;
 
+import java.time.DayOfWeek;
+import java.time.Duration;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
-import java.util.List;
+import java.time.temporal.ChronoUnit;
 
 /**
  * Domain service responsible for validating booking business rules.
- * All validation rules are enforced here before a booking can be created.
+ * Works with the new slot template architecture.
  */
+@Component
 public class BookingValidator {
 
-    private static final int DEFAULT_MAX_ACTIVE_BOOKINGS = 3;
-    private static final int CANCELLATION_DEADLINE_HOURS = 1;
-
-    private final int maxActiveBookings;
-
-    public BookingValidator() {
-        this(DEFAULT_MAX_ACTIVE_BOOKINGS);
-    }
-
-    public BookingValidator(int maxActiveBookings) {
-        this.maxActiveBookings = maxActiveBookings;
-    }
-
     /**
-     * Validates all booking rules for a slot.
+     * Validate a booking request against slot template rules.
      *
-     * @param slot The slot to book
-     * @param userId The user making the booking
-     * @param existingBookingsForSlot Existing bookings for this slot
-     * @param userActiveBookings User's current active bookings
+     * @param slot The slot template
+     * @param bookingDate The requested booking date
+     * @param bookingTime The requested booking time
      * @param now Current date/time for validation
      * @throws BookingValidationException if any validation rule fails
      */
-    public void validateBooking(Slot slot, UserId userId,
-                                List<Booking> existingBookingsForSlot,
-                                List<Booking> userActiveBookings,
-                                LocalDateTime now) {
+    public void validate(Slot slot, LocalDate bookingDate, LocalTime bookingTime, LocalDateTime now) {
         // RG02: Pas de réservation dans le passé
-        validateSlotNotInPast(slot, now);
+        validateNotInPast(bookingDate, bookingTime, now);
 
-        // RG03: Capacité du créneau
-        validateSlotAvailable(slot);
+        // RG04: Validate day is available for this slot template
+        validateDayAvailable(slot, bookingDate);
 
-        // Validation des règles du mode de livraison
-        validateDateForMode(slot, now);
-        validateTimeForMode(slot);
-        validateMinAdvanceTime(slot, now);
-        validateMaxAdvanceDays(slot, now);
-        validateCutoffTime(slot, now);
-        validateAsapWindow(slot, now);
+        // RG05: Validate time is valid for this slot template
+        validateTimeValid(slot, bookingTime);
 
-        // RG01: Unicité de réservation
-        validateUserNotAlreadyBooked(slot, userId, existingBookingsForSlot);
+        DeliveryMode mode = slot.getDeliveryMode();
 
-        // RG08: Limite de réservations actives
-        validateUserActiveBookingsLimit(userId, userActiveBookings);
+        // Validate minimum advance time
+        validateMinAdvanceTime(mode, bookingDate, bookingTime, now);
+
+        // Validate maximum advance days
+        validateMaxAdvanceDays(mode, bookingDate, now.toLocalDate());
+
+        // Mode-specific validations
+        validateModeSpecificRules(mode, bookingDate, bookingTime, now);
     }
 
     /**
-     * RG02: Validates that the slot is not in the past.
+     * RG02: Validates that the booking is not in the past.
      */
-    public void validateSlotNotInPast(Slot slot, LocalDateTime now) {
-        LocalDateTime slotDateTime = LocalDateTime.of(slot.getDate(), slot.getTimeSlot().startTime());
-        if (slotDateTime.isBefore(now)) {
-            throw new SlotInPastException(slotDateTime, now);
+    private void validateNotInPast(LocalDate date, LocalTime time, LocalDateTime now) {
+        LocalDateTime bookingDateTime = LocalDateTime.of(date, time);
+        if (bookingDateTime.isBefore(now)) {
+            throw new SlotInPastException(date, time);
         }
     }
 
     /**
-     * RG03: Validates that the slot has available capacity.
+     * RG04: Validates that the booking date's day of week is available for the slot template.
      */
-    public void validateSlotAvailable(Slot slot) {
-        if (!slot.isAvailable()) {
-            throw new SlotNotAvailableException(
-                    "Créneau complet (%d/%d)".formatted(slot.getBookedCount(), slot.getCapacity())
+    private void validateDayAvailable(Slot slot, LocalDate bookingDate) {
+        DayOfWeek dayOfWeek = bookingDate.getDayOfWeek();
+        if (!slot.isAvailableOn(dayOfWeek)) {
+            throw new InvalidDateForModeException(
+                    slot.getDeliveryMode(),
+                    bookingDate,
+                    slot.getAvailableDays()
             );
         }
     }
 
     /**
-     * RG04 & RG06: Validates that the date is valid for the delivery mode.
+     * RG05: Validates that the booking time is valid for the slot template.
+     * - Must be within operating hours
+     * - Must align with slot grid (e.g., for 60min slots: 08:00, 09:00, not 08:30)
      */
-    public void validateDateForMode(Slot slot, LocalDateTime now) {
-        DeliveryMode mode = slot.getDeliveryMode();
-        LocalDate slotDate = slot.getDate();
-        LocalDate today = now.toLocalDate();
-
-        // Check day of week availability
-        if (!mode.isAvailableFor(slotDate)) {
-            throw new InvalidDateForModeException(mode, slotDate);
-        }
-
-        // Check mode-specific date rules
-        if (!mode.isValidDate(slotDate, today)) {
-            String reason = switch (mode) {
-                case DELIVERY_TODAY, DELIVERY_ASAP ->
-                        "Le mode %s ne permet de réserver que pour aujourd'hui".formatted(mode.name());
-                case DRIVE, DELIVERY ->
-                        "La date ne peut pas être dans le passé";
-            };
-            throw new InvalidDateForModeException(mode, slotDate, reason);
-        }
-    }
-
-    /**
-     * RG05: Validates that the slot time is within allowed range for the mode.
-     */
-    public void validateTimeForMode(Slot slot) {
-        DeliveryMode mode = slot.getDeliveryMode();
-        LocalTime slotTime = slot.getTimeSlot().startTime();
-
-        if (!mode.isValidSlotTime(slotTime)) {
-            throw new InvalidTimeForModeException(mode, slotTime);
+    private void validateTimeValid(Slot slot, LocalTime bookingTime) {
+        if (!slot.isValidBookingTime(bookingTime)) {
+            throw new InvalidTimeForModeException(
+                    slot.getDeliveryMode(),
+                    bookingTime,
+                    slot.getStartTime(),
+                    slot.getEndTime(),
+                    slot.getValidBookingTimes()
+            );
         }
     }
 
     /**
      * Validates minimum advance time requirement.
      */
-    public void validateMinAdvanceTime(Slot slot, LocalDateTime now) {
-        DeliveryMode mode = slot.getDeliveryMode();
-        LocalDateTime slotDateTime = LocalDateTime.of(slot.getDate(), slot.getTimeSlot().startTime());
+    private void validateMinAdvanceTime(DeliveryMode mode, LocalDate bookingDate,
+                                        LocalTime bookingTime, LocalDateTime now) {
+        LocalDateTime bookingDateTime = LocalDateTime.of(bookingDate, bookingTime);
 
-        if (!mode.meetsMinAdvanceTime(slotDateTime, now)) {
-            throw new MinAdvanceTimeException(mode, slotDateTime, now);
+        // Special handling for ASAP (30 minutes minimum)
+        if (mode == DeliveryMode.DELIVERY_ASAP) {
+            Duration minAdvance = Duration.ofMinutes(30);
+            if (Duration.between(now, bookingDateTime).compareTo(minAdvance) < 0) {
+                throw new MinAdvanceTimeException(mode, bookingDateTime, now);
+            }
+            return;
+        }
+
+        // Other modes use hours
+        Duration minAdvance = Duration.ofHours(mode.getMinAdvanceHours());
+        if (Duration.between(now, bookingDateTime).compareTo(minAdvance) < 0) {
+            throw new MinAdvanceTimeException(mode, bookingDateTime, now);
         }
     }
 
     /**
      * Validates maximum advance days requirement.
      */
-    public void validateMaxAdvanceDays(Slot slot, LocalDateTime now) {
-        DeliveryMode mode = slot.getDeliveryMode();
-        LocalDate slotDate = slot.getDate();
-        LocalDate today = now.toLocalDate();
-
-        if (!mode.meetsMaxAdvanceDays(slotDate, today)) {
-            throw new MaxAdvanceDaysException(mode, slotDate, today);
-        }
-    }
-
-    /**
-     * Validates cutoff time for DELIVERY_TODAY mode.
-     */
-    public void validateCutoffTime(Slot slot, LocalDateTime now) {
-        DeliveryMode mode = slot.getDeliveryMode();
-
-        if (mode == DeliveryMode.DELIVERY_TODAY && mode.isCutoffTimePassed(now.toLocalTime())) {
-            throw new CutoffTimePassedException(mode.getCutoffTime(), now.toLocalTime());
-        }
-    }
-
-    /**
-     * Validates ASAP window (4 hours max) for DELIVERY_ASAP mode.
-     */
-    public void validateAsapWindow(Slot slot, LocalDateTime now) {
-        DeliveryMode mode = slot.getDeliveryMode();
-
+    private void validateMaxAdvanceDays(DeliveryMode mode, LocalDate bookingDate, LocalDate today) {
+        // ASAP uses hours, not days
         if (mode == DeliveryMode.DELIVERY_ASAP) {
-            LocalDateTime slotDateTime = LocalDateTime.of(slot.getDate(), slot.getTimeSlot().startTime());
+            return;
+        }
 
-            if (!mode.meetsAsapWindow(slotDateTime, now)) {
-                throw new AsapWindowExceededException(slotDateTime, now, mode.getMaxAdvanceHours());
+        long daysAhead = ChronoUnit.DAYS.between(today, bookingDate);
+        int maxDays = mode.getMaxAdvanceDays();
+
+        if (daysAhead > maxDays) {
+            throw new MaxAdvanceDaysException(mode, bookingDate, today);
+        }
+    }
+
+    /**
+     * Validate mode-specific rules.
+     */
+    private void validateModeSpecificRules(DeliveryMode mode, LocalDate bookingDate,
+                                           LocalTime bookingTime, LocalDateTime now) {
+        switch (mode) {
+            case DELIVERY_TODAY -> validateDeliveryToday(bookingDate, now);
+            case DELIVERY_ASAP -> validateDeliveryAsap(bookingDate, bookingTime, now);
+            default -> {
+                // No additional rules for DRIVE and DELIVERY
             }
         }
     }
 
     /**
-     * RG01: Validates that the user doesn't already have a booking for this slot.
+     * DELIVERY_TODAY specific validation:
+     * - Can only book for today
+     * - Cutoff time is 19:00
      */
-    public void validateUserNotAlreadyBooked(Slot slot, UserId userId, List<Booking> existingBookingsForSlot) {
-        boolean alreadyBooked = existingBookingsForSlot.stream()
-                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
-                .anyMatch(b -> b.getUserId().equals(userId));
+    private void validateDeliveryToday(LocalDate bookingDate, LocalDateTime now) {
+        if (!bookingDate.equals(now.toLocalDate())) {
+            throw new InvalidDateForModeException(
+                    DeliveryMode.DELIVERY_TODAY,
+                    bookingDate,
+                    "DELIVERY_TODAY can only be booked for today"
+            );
+        }
 
-        if (alreadyBooked) {
-            throw new UserAlreadyBookedException(userId, slot.getId());
+        // Cutoff time: 19:00
+        if (now.toLocalTime().isAfter(LocalTime.of(19, 0)) ||
+                now.toLocalTime().equals(LocalTime.of(19, 0))) {
+            throw new CutoffTimePassedException(DeliveryMode.DELIVERY_TODAY, LocalTime.of(19, 0));
         }
     }
 
     /**
-     * RG08: Validates that the user doesn't exceed the maximum active bookings limit.
+     * DELIVERY_ASAP specific validation:
+     * - Can only book for today
+     * - Maximum 4 hours ahead
      */
-    public void validateUserActiveBookingsLimit(UserId userId, List<Booking> userActiveBookings) {
-        long activeCount = userActiveBookings.stream()
-                .filter(b -> b.getStatus() != BookingStatus.CANCELLED)
-                .count();
-
-        if (activeCount >= maxActiveBookings) {
-            throw new MaxActiveBookingsException(userId, (int) activeCount, maxActiveBookings);
+    private void validateDeliveryAsap(LocalDate bookingDate, LocalTime bookingTime, LocalDateTime now) {
+        if (!bookingDate.equals(now.toLocalDate())) {
+            throw new InvalidDateForModeException(
+                    DeliveryMode.DELIVERY_ASAP,
+                    bookingDate,
+                    "DELIVERY_ASAP can only be booked for today"
+            );
         }
-    }
 
-    /**
-     * RG07: Validates that cancellation is allowed (at least 1 hour before slot start).
-     */
-    public void validateCancellationAllowed(Booking booking, LocalDateTime slotStartTime, LocalDateTime now) {
-        LocalDateTime cancellationDeadline = slotStartTime.minusHours(CANCELLATION_DEADLINE_HOURS);
+        // Max 4 hours ahead
+        LocalDateTime bookingDateTime = LocalDateTime.of(bookingDate, bookingTime);
+        Duration timeUntilBooking = Duration.between(now, bookingDateTime);
 
-        if (now.isAfter(cancellationDeadline)) {
-            throw new CancellationNotAllowedException(booking.getId(), slotStartTime, now);
+        if (timeUntilBooking.toHours() > 4) {
+            throw new AsapWindowExceededException(bookingTime, now.toLocalTime());
         }
-    }
-
-    public int getMaxActiveBookings() {
-        return maxActiveBookings;
     }
 }

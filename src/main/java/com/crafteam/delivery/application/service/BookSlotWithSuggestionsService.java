@@ -108,6 +108,16 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
             List<Booking> userBookings,
             LocalDateTime now) {
 
+        // TODO: Rebuild this method for slot templates
+        // The slot parameter is now a TEMPLATE, not a specific date/time instance
+        // We need to extract bookingDate and bookingTime from somewhere (command?)
+        // For now, return an error
+
+        log.error("attemptBookingOrSuggest needs to be rebuilt for slot templates");
+        return Mono.error(new UnsupportedOperationException(
+                "BookSlotWithSuggestionsService needs to be rebuilt for the new slot template architecture"));
+
+        /* OLD CODE - needs rebuild
         try {
             // Validate all business rules
             bookingValidator.validateBooking(slot, userId, slotBookings, userBookings, now);
@@ -136,9 +146,16 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
             String reason = mapExceptionToReason(e);
             return generateSuggestions(slot, userId, userBookings, now, reason);
         }
+        */
     }
 
     private Mono<Booking> createBooking(Slot slot, UserId userId) {
+        // TODO: Rebuild - slot.book() no longer exists, Slot is a template
+        // Booking needs bookingDate and bookingTime parameters
+        log.error("createBooking needs to be rebuilt for slot templates");
+        return Mono.error(new UnsupportedOperationException("createBooking needs rebuild"));
+
+        /* OLD CODE
         Booking booking = slot.book(userId);
 
         return slotRepository.save(slot)
@@ -153,6 +170,7 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
                                 .thenReturn(savedBooking)
                 )
                 .doOnSuccess(b -> log.info("Booking created: {}", b.getId()));
+        */
     }
 
     private Mono<BookingResult> generateSuggestions(
@@ -162,6 +180,11 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
             LocalDateTime now,
             String unavailabilityReason) {
 
+        // TODO: Rebuild for slot templates - slot.getDate() no longer exists
+        log.error("generateSuggestions needs to be rebuilt for slot templates");
+        return Mono.error(new UnsupportedOperationException("generateSuggestions needs rebuild"));
+
+        /* OLD CODE
         DeliveryMode mode = requestedSlot.getDeliveryMode();
         LocalDate today = now.toLocalDate();
 
@@ -192,10 +215,12 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
                     return BookingResult.unavailableWithSuggestions(
                             requestedSlot, suggestions, unavailabilityReason);
                 });
+        */
     }
 
     /**
      * Fetches additional candidate slots for days other than the requested date.
+     * TODO: Rebuild for slot templates
      */
     private reactor.core.publisher.Flux<Slot> fetchAdditionalCandidates(
             DeliveryMode mode,
@@ -203,6 +228,10 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
             LocalDate startDate,
             LocalDate endDate) {
 
+        // TODO: Rebuild - slot.getDate() no longer exists
+        return reactor.core.publisher.Flux.empty();
+
+        /* OLD CODE
         // For DELIVERY_TODAY and DELIVERY_ASAP, only today is valid
         if (mode == DeliveryMode.DELIVERY_TODAY || mode == DeliveryMode.DELIVERY_ASAP) {
             return reactor.core.publisher.Flux.empty();
@@ -212,6 +241,7 @@ public class BookSlotWithSuggestionsService implements BookSlotWithSuggestionsUs
         return slotRepository.findByDateRange(startDate, endDate)
                 .filter(slot -> slot.getDeliveryMode() == mode)
                 .filter(slot -> !slot.getDate().equals(requestedDate));
+        */
     }
 
     /**

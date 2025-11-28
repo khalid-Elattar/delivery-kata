@@ -6,6 +6,8 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -161,6 +163,63 @@ public enum DeliveryMode {
      */
     public boolean isValidSlotTime(LocalTime slotStartTime) {
         return !slotStartTime.isBefore(startTime) && !slotStartTime.isAfter(endTime.minus(slotDuration));
+    }
+
+    /**
+     * Check if the given time is a valid slot start time for this mode.
+     * The time must:
+     * 1. Be >= startTime
+     * 2. Allow a full slot before endTime (last valid start = endTime - slotDuration)
+     * 3. Align with the slot grid (minutes since start must be divisible by slot duration)
+     *
+     * For DRIVE (1h slots, 08:00-20:00):
+     *   - Valid: 08:00, 09:00, 10:00, ... 19:00
+     *   - Invalid: 08:30, 10:15, 20:00
+     *
+     * For DELIVERY (2h slots, 09:00-21:00):
+     *   - Valid: 09:00, 11:00, 13:00, 15:00, 17:00, 19:00
+     *   - Invalid: 10:00, 12:00, 14:00, 20:00
+     *
+     * @param time The time to check
+     * @return true if the time is a valid slot start time for this mode
+     */
+    public boolean isValidSlotStartTime(LocalTime time) {
+        // 1. Time must be >= startTime
+        if (time.isBefore(this.startTime)) {
+            return false;
+        }
+
+        // 2. Time must allow full slot before endTime
+        // Last valid start = endTime - slotDuration
+        LocalTime lastValidStart = this.endTime.minus(this.slotDuration);
+        if (time.isAfter(lastValidStart)) {
+            return false;
+        }
+
+        // 3. Time must align with slot grid
+        // Minutes since start must be divisible by slot duration
+        long minutesSinceStart = Duration.between(this.startTime, time).toMinutes();
+        long slotDurationMinutes = this.slotDuration.toMinutes();
+
+        return minutesSinceStart % slotDurationMinutes == 0;
+    }
+
+    /**
+     * Get all valid slot start times for this mode.
+     * Returns a list of all possible slot start times that align with the slot grid.
+     *
+     * @return List of valid slot start times
+     */
+    public List<LocalTime> getAvailableSlotTimes() {
+        List<LocalTime> slots = new ArrayList<>();
+        LocalTime current = this.startTime;
+        LocalTime lastValidStart = this.endTime.minus(this.slotDuration);
+
+        while (!current.isAfter(lastValidStart)) {
+            slots.add(current);
+            current = current.plus(this.slotDuration);
+        }
+        return slots;
     }
 
     /**

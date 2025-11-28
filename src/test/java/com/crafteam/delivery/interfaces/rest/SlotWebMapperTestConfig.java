@@ -8,6 +8,9 @@ import com.crafteam.delivery.interfaces.rest.mapper.SlotWebMapper;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 
+import java.time.Duration;
+import java.util.HashSet;
+
 /**
  * Test configuration to provide SlotWebMapper for WebFluxTest.
  */
@@ -23,15 +26,13 @@ public class SlotWebMapperTestConfig {
                     return null;
                 }
                 return new SlotResponse(
-                        slot.getId().toString(),
+                        slot.getId().value(),
                         slot.getDeliveryMode(),
-                        slot.getDate(),
-                        slot.getTimeSlot().startTime(),
-                        slot.getTimeSlot().endTime(),
-                        slot.getCapacity(),
-                        slot.getBookedCount(),
-                        slot.remainingCapacity(),
-                        slot.isAvailable()
+                        slot.getAvailableDays(),
+                        slot.getStartTime(),
+                        slot.getEndTime(),
+                        (int) slot.getSlotDurationMinutes(),
+                        slot.getCapacity()
                 );
             }
 
@@ -42,9 +43,10 @@ public class SlotWebMapperTestConfig {
                 }
                 return new CreateSlotCommand(
                         request.deliveryMode(),
-                        request.date(),
+                        request.availableDays(),
                         request.startTime(),
                         request.endTime(),
+                        request.slotDuration(),
                         request.capacity()
                 );
             }

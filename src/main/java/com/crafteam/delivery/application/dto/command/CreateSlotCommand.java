@@ -2,17 +2,20 @@ package com.crafteam.delivery.application.dto.command;
 
 import com.crafteam.delivery.domain.model.slot.DeliveryMode;
 
-import java.time.LocalDate;
+import java.time.DayOfWeek;
 import java.time.LocalTime;
+import java.util.List;
 
 /**
- * Command for creating a new delivery slot.
+ * Command for creating a new delivery slot template.
+ * Updated for template-based architecture (no specific date).
  */
 public record CreateSlotCommand(
         DeliveryMode deliveryMode,
-        LocalDate date,
+        List<DayOfWeek> availableDays,
         LocalTime startTime,
         LocalTime endTime,
+        int slotDuration,
         int capacity
 ) {
 }

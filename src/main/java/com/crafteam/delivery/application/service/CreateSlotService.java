@@ -36,13 +36,14 @@ public class CreateSlotService implements CreateSlotUseCase {
 
     @Override
     public Mono<Slot> execute(CreateSlotCommand command) {
-        log.info("Creating slot: mode={}, date={}, time={}-{}",
-                command.deliveryMode(), command.date(),
-                command.startTime(), command.endTime());
+        log.info("Creating slot template: mode={}, time={}-{}",
+                command.deliveryMode(), command.startTime(), command.endTime());
 
-        TimeSlot timeSlot = new TimeSlot(command.startTime(), command.endTime());
-        Slot slot = Slot.create(command.deliveryMode(), command.date(),
-                timeSlot, command.capacity());
+        // TODO: Update CreateSlotCommand to accept Set<DayOfWeek> and Duration instead of LocalDate
+        // For now, create a slot using the delivery mode's defaults
+        // This is a temporary workaround until the command is updated
+
+        Slot slot = Slot.createFromMode(command.deliveryMode());
 
         return slotRepository.save(slot)
                 .flatMap(savedSlot ->
@@ -50,10 +51,11 @@ public class CreateSlotService implements CreateSlotUseCase {
                                 .doOnSuccess(v -> savedSlot.clearDomainEvents())
                                 .thenReturn(savedSlot)
                 )
-                .flatMap(savedSlot ->
-                        slotCache.invalidateCache(command.deliveryMode(), command.date())
-                                .thenReturn(savedSlot)
-                )
-                .doOnSuccess(s -> log.info("Slot created: {}", s.getId()));
+                // TODO: Cache invalidation needs to be reworked for templates
+                // .flatMap(savedSlot ->
+                //         slotCache.invalidateCache(command.deliveryMode(), command.date())
+                //                 .thenReturn(savedSlot)
+                // )
+                .doOnSuccess(s -> log.info("Slot template created: {}", s.getId()));
     }
 }

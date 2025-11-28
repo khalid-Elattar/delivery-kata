@@ -9,6 +9,17 @@ import java.util.Objects;
  *
  * <p>Suggestions are sorted by proximity score (higher is better), making it easy
  * to present the most relevant alternatives to the user.</p>
+ *
+ * TODO: DISABLED - Entire class needs rewrite for new Slot architecture
+ * The old Slot had: date, timeSlot, bookedCount, remainingCapacity
+ * The new Slot is a template with: availableDays, startTime, endTime, slotDuration, capacity
+ *
+ * New SlotSuggestion should contain:
+ * - Slot template (reference to the delivery mode template)
+ * - LocalDate (suggested date)
+ * - LocalTime (suggested time)
+ * - int remainingCapacity (calculated from bookings)
+ * - SuggestionType, proximityScore, reason, validUntil (same as before)
  */
 public record SlotSuggestion(
         Slot slot,
@@ -35,14 +46,14 @@ public record SlotSuggestion(
         Objects.requireNonNull(validUntil, "Valid until is required");
     }
 
-    /**
-     * Creates a suggestion with auto-calculated proximity score and reason.
-     *
-     * @param slot The suggested slot
-     * @param requestedSlot The originally requested slot
-     * @param now Current time for calculating validity
-     * @return A new SlotSuggestion with calculated metadata
-     */
+    // TODO: DISABLED - Needs rewrite for new Slot architecture
+    // This factory method should take:
+    // - Slot template
+    // - LocalDate suggestedDate, LocalTime suggestedTime
+    // - LocalDate requestedDate, LocalTime requestedTime
+    // - int remainingCapacity
+    // - LocalDateTime now
+    /*
     public static SlotSuggestion create(Slot slot, Slot requestedSlot, LocalDateTime now) {
         SuggestionType type = determineSuggestionType(slot, requestedSlot);
         int score = calculateProximityScore(slot, requestedSlot);
@@ -51,11 +62,10 @@ public record SlotSuggestion(
 
         return new SlotSuggestion(slot, type, score, reason, validUntil);
     }
+    */
 
-    /**
-     * Determines the type of suggestion based on the relationship between
-     * the suggested slot and the requested slot.
-     */
+    // TODO: DISABLED - Uses old Slot API (getDate(), getTimeSlot())
+    /*
     private static SuggestionType determineSuggestionType(Slot suggested, Slot requested) {
         boolean sameDay = suggested.getDate().equals(requested.getDate());
         boolean sameTime = suggested.getTimeSlot().startTime().equals(requested.getTimeSlot().startTime());
@@ -77,11 +87,10 @@ public record SlotSuggestion(
 
         return SuggestionType.NEXT_AVAILABLE_DAY;
     }
+    */
 
-    /**
-     * Calculates a proximity score indicating how close the suggestion is
-     * to the originally requested slot. Higher scores are better.
-     */
+    // TODO: DISABLED - Uses old Slot API (getDate(), getTimeSlot(), remainingCapacity())
+    /*
     private static int calculateProximityScore(Slot suggested, Slot requested) {
         int score = 0;
 
@@ -114,10 +123,10 @@ public record SlotSuggestion(
 
         return score;
     }
+    */
 
-    /**
-     * Generates a human-readable reason for the suggestion.
-     */
+    // TODO: DISABLED - Uses old Slot API (getDate(), getTimeSlot())
+    /*
     private static String generateReason(Slot suggested, Slot requested, SuggestionType type) {
         return switch (type) {
             case SAME_DAY_EARLIER -> "Même jour, %d minutes plus tôt".formatted(
@@ -149,11 +158,10 @@ public record SlotSuggestion(
             );
         };
     }
+    */
 
-    /**
-     * Calculates until when this suggestion remains valid.
-     * The suggestion is valid until the slot's minimum advance time requirement is no longer met.
-     */
+    // TODO: DISABLED - Uses old Slot API (getDate(), getTimeSlot())
+    /*
     private static LocalDateTime calculateValidUntil(Slot slot, LocalDateTime now) {
         DeliveryMode mode = slot.getDeliveryMode();
         LocalDateTime slotDateTime = LocalDateTime.of(slot.getDate(), slot.getTimeSlot().startTime());
@@ -169,6 +177,7 @@ public record SlotSuggestion(
             default -> slotDateTime.minusHours(mode.getMinAdvanceHours());
         };
     }
+    */
 
     /**
      * Compares suggestions by proximity score (descending order).
@@ -186,12 +195,14 @@ public record SlotSuggestion(
         return slot.getId();
     }
 
-    /**
-     * Returns the remaining capacity of the suggested slot.
-     */
+    // TODO: DISABLED - Uses old Slot API (remainingCapacity())
+    // In new architecture, remaining capacity needs to be calculated from:
+    // slot.getCapacity() - currentBookingCount (from repository)
+    /*
     public int getRemainingCapacity() {
         return slot.remainingCapacity();
     }
+    */
 
     /**
      * Checks if this suggestion is still valid at the given time.

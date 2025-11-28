@@ -13,6 +13,8 @@ import org.springframework.data.relational.core.mapping.Column;
 import org.springframework.data.relational.core.mapping.Table;
 
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.UUID;
 
 /**
@@ -37,6 +39,12 @@ public class BookingEntity implements Persistable<UUID> {
     @NotNull(message = "User ID is required")
     @Column("user_id")
     private UUID userId;
+
+    @Column("booking_date")
+    private LocalDate bookingDate;
+
+    @Column("booking_time")
+    private LocalTime bookingTime;
 
     @NotBlank(message = "Status is required")
     @Column("status")

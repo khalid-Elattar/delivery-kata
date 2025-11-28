@@ -37,6 +37,22 @@ public class GetSlotAvailabilityService implements GetSlotAvailabilityUseCase {
     public Mono<SlotAvailabilityResponse> execute(SlotAvailabilityQuery query) {
         log.info("Getting slot availability for mode={}, date={}", query.mode(), query.date());
 
+        // TODO: DISABLED - Needs complete rewrite for new Slot architecture
+        // The new architecture:
+        // 1. Slots are templates (no specific date/time, just availability rules)
+        // 2. Bookings reference slot templates + specify date/time
+        // 3. To get availability, we need to:
+        //    a) Find slot template for the delivery mode
+        //    b) Generate valid time slots for the requested date (based on template rules)
+        //    c) Query bookings for that date/time to calculate remaining capacity
+        //    d) Apply business rules (min advance, max advance, day validation, etc.)
+        //
+        // Implementation approach:
+        // - SlotRepository.findByDeliveryMode(mode) -> get template
+        // - template.getValidBookingTimes() -> get possible time slots
+        // - BookingRepository.countByDateTimeAndMode() -> get current bookings per slot
+        // - Apply capacity and business rules to determine availability
+
         DeliveryMode mode = query.mode();
         LocalDateTime now = LocalDateTime.now(clock);
 
@@ -53,15 +69,20 @@ public class GetSlotAvailabilityService implements GetSlotAvailabilityUseCase {
             return Mono.just(buildResponse(mode, query.date(), List.of(), dateValidation.message()));
         }
 
-        return slotRepository.findByDeliveryModeAndDate(mode, query.date())
-                .map(slot -> mapToAvailableSlotInfo(slot, mode, now))
-                .collectList()
-                .map(slots -> buildResponse(mode, query.date(), slots, null))
-                .doOnSuccess(response ->
-                        log.info("Found {} slots for mode={}, date={}",
-                                response.availableSlots().size(), query.mode(), query.date()));
+        // TEMPORARY: Return empty response until properly implemented
+        log.warn("GetSlotAvailabilityService is disabled - needs rewrite for new architecture");
+        return Mono.just(buildResponse(mode, query.date(), List.of(),
+                "Service temporarily disabled - slot availability needs architectural update"));
     }
 
+    // TODO: DISABLED - mapToAvailableSlotInfo needs rewrite
+    // This method was using old Slot API (getDate, getTimeSlot, isAvailable, remainingCapacity)
+    // New implementation should:
+    // 1. Take (Slot template, LocalDate, LocalTime, current booking count)
+    // 2. Calculate remaining capacity = template.capacity - bookingCount
+    // 3. Validate booking time rules
+    // 4. Return AvailableSlotInfo
+    /*
     private AvailableSlotInfo mapToAvailableSlotInfo(Slot slot, DeliveryMode mode, LocalDateTime now) {
         LocalDateTime slotDateTime = LocalDateTime.of(slot.getDate(), slot.getTimeSlot().startTime());
 
@@ -94,6 +115,7 @@ public class GetSlotAvailabilityService implements GetSlotAvailabilityUseCase {
                 slot.remainingCapacity()
         );
     }
+    */
 
     private SlotAvailabilityResponse buildResponse(DeliveryMode mode, java.time.LocalDate date,
                                                    List<AvailableSlotInfo> slots, String dateError) {

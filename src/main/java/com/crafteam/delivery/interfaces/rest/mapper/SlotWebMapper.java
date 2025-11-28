@@ -11,21 +11,19 @@ import org.mapstruct.Named;
 
 /**
  * MapStruct mapper for web layer slot conversions.
+ * Updated for new slot template architecture.
  */
 @Mapper(componentModel = "spring")
 public interface SlotWebMapper {
 
-    @Mapping(target = "id", source = "id", qualifiedByName = "slotIdToString")
-    @Mapping(target = "startTime", source = "timeSlot.startTime")
-    @Mapping(target = "endTime", source = "timeSlot.endTime")
-    @Mapping(target = "remainingCapacity", expression = "java(slot.remainingCapacity())")
-    @Mapping(target = "available", expression = "java(slot.isAvailable())")
+    @Mapping(target = "id", source = "id", qualifiedByName = "slotIdToUuid")
+    @Mapping(target = "slotDurationMinutes", expression = "java((int)slot.getSlotDuration().toMinutes())")
     SlotResponse toResponse(Slot slot);
 
     CreateSlotCommand toCommand(CreateSlotRequest request);
 
-    @Named("slotIdToString")
-    default String slotIdToString(SlotId slotId) {
-        return slotId != null ? slotId.toString() : null;
+    @Named("slotIdToUuid")
+    default java.util.UUID slotIdToUuid(SlotId slotId) {
+        return slotId != null ? slotId.value() : null;
     }
 }

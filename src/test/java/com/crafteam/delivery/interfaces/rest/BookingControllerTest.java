@@ -74,7 +74,8 @@ class BookingControllerTest {
             UserId userId = UserId.generate();
             BookSlotRequest request = new BookSlotRequest(
                     slotId.toString(),
-                    userId.toString()
+                    userId.toString(),
+                    null, null, null  // Legacy mode
             );
 
             Booking booking = Booking.create(slotId, userId);
@@ -102,7 +103,8 @@ class BookingControllerTest {
             // Given
             BookSlotRequest request = new BookSlotRequest(
                     UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString()
+                    UUID.randomUUID().toString(),
+                    null, null, null  // Legacy mode
             );
 
             when(bookSlotUseCase.execute(any(BookSlotCommand.class)))
@@ -126,7 +128,8 @@ class BookingControllerTest {
             // Given
             BookSlotRequest request = new BookSlotRequest(
                     UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString()
+                    UUID.randomUUID().toString(),
+                    null, null, null  // Legacy mode
             );
 
             when(bookSlotUseCase.execute(any(BookSlotCommand.class)))
@@ -149,7 +152,8 @@ class BookingControllerTest {
             // Given
             BookSlotRequest request = new BookSlotRequest(
                     UUID.randomUUID().toString(),
-                    UUID.randomUUID().toString()
+                    UUID.randomUUID().toString(),
+                    null, null, null  // Legacy mode
             );
 
             // When/Then

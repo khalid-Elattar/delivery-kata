@@ -58,17 +58,37 @@ public class SlotEventConsumer {
             @Header(KafkaHeaders.RECEIVED_PARTITION) int partition,
             @Header(KafkaHeaders.OFFSET) long offset) {
 
-        log.info("Received SlotCreatedEvent: slotId={}, mode={}, date={}, timeSlot={}, capacity={} [topic={}, partition={}, offset={}]",
+        log.info("Received SlotCreatedEvent: slotId={}, mode={}, availableDays={}, time={}-{}, capacity={} [topic={}, partition={}, offset={}]",
                 event.slotId(),
                 event.deliveryMode(),
-                event.date(),
-                event.timeSlot(),
+                event.availableDays(),
+                event.startTime(),
+                event.endTime(),
                 event.capacity(),
                 topic,
                 partition,
                 offset);
 
         try {
+            // TODO: Rebuild for slot templates - slot.getDate() no longer exists
+            // Slot is now a template, not a specific date instance
+
+            // 1. Log analytics event
+            log.info("ANALYTICS: Slot template created - slotId={}, mode={}, capacity={}",
+                    event.slotId(), event.deliveryMode(), event.capacity());
+
+            // 2. TODO: Update search index (ElasticSearch)
+            // searchService.indexSlot(event.slotId());
+
+            // 3. TODO: Send notification to admin dashboard
+            // adminDashboardService.notifyNewSlot(event);
+
+            // 4. TODO: Sync with external calendar/scheduling system
+            // externalCalendarService.createEvent(event);
+
+            log.info("Successfully processed SlotCreatedEvent: slotId={}", event.slotId());
+
+            /* OLD CODE - needs rebuild
             // 1. Warm up cache with the new slot
             slotRepository.findById(event.slotId())
                     .flatMap(slot -> {
@@ -85,21 +105,7 @@ public class SlotEventConsumer {
                     .doOnError(e -> log.warn("Failed to warm cache for slot: {}", event.slotId(), e))
                     .onErrorResume(e -> reactor.core.publisher.Mono.empty())
                     .block(); // Block is acceptable in Kafka listener
-
-            // 2. Log analytics event
-            log.info("ANALYTICS: Slot created - slotId={}, mode={}, date={}, capacity={}, timeSlot={}",
-                    event.slotId(), event.deliveryMode(), event.date(), event.capacity(), event.timeSlot());
-
-            // 3. TODO: Update search index (ElasticSearch)
-            // searchService.indexSlot(event.slotId());
-
-            // 4. TODO: Send notification to admin dashboard
-            // adminDashboardService.notifyNewSlot(event);
-
-            // 5. TODO: Sync with external calendar/scheduling system
-            // externalCalendarService.createEvent(event);
-
-            log.info("Successfully processed SlotCreatedEvent: slotId={}", event.slotId());
+            */
 
         } catch (Exception e) {
             log.error("Error processing SlotCreatedEvent: slotId={}", event.slotId(), e);
@@ -136,6 +142,34 @@ public class SlotEventConsumer {
                 offset);
 
         try {
+            // TODO: Rebuild for slot templates - slot.getDate(), getBookedCount(), getTimeSlot() no longer exist
+            // Capacity tracking is now done via Booking entities, not on Slot
+
+            // 1. Log analytics event
+            log.info("ANALYTICS: Slot booked - slotId={}, userId={}, remainingCapacity={}",
+                    event.slotId(), event.userId(), event.remainingCapacity());
+
+            // 2. Check capacity threshold and send alerts
+            if (event.remainingCapacity() == 0) {
+                log.warn("ALERT: Slot FULL - slotId={}", event.slotId());
+                // TODO: Send alert to operations team
+                // alertService.sendSlotFullAlert(event.slotId());
+            }
+
+            // 3. TODO: Update real-time dashboard
+            // dashboardService.updateSlotMetrics(event.slotId(), event.remainingCapacity());
+
+            // 4. TODO: Trigger recommendation engine update
+            // recommendationService.updateAvailability(event.deliveryMode(), event.date());
+
+            // 5. TODO: Notify delivery coordinators if threshold reached
+            // if (event.remainingCapacity() == 0) {
+            //     deliveryCoordinatorService.notifySlotFull(event.slotId());
+            // }
+
+            log.info("Successfully processed SlotBookedEvent: slotId={}", event.slotId());
+
+            /* OLD CODE - needs rebuild
             // 1. Invalidate cache to reflect updated availability
             slotRepository.findById(event.slotId())
                     .flatMap(slot -> slotCachePort.invalidateCache(slot.getDeliveryMode(), slot.getDate()))
@@ -163,23 +197,7 @@ public class SlotEventConsumer {
                             // alertService.sendLowCapacityWarning(event.slotId(), event.remainingCapacity());
                         }
                     });
-
-            // 3. Log analytics event
-            log.info("ANALYTICS: Slot booked - slotId={}, userId={}, remainingCapacity={}",
-                    event.slotId(), event.userId(), event.remainingCapacity());
-
-            // 4. TODO: Update real-time dashboard
-            // dashboardService.updateSlotMetrics(event.slotId(), event.remainingCapacity());
-
-            // 5. TODO: Trigger recommendation engine update
-            // recommendationService.updateAvailability(event.deliveryMode(), event.date());
-
-            // 6. TODO: Notify delivery coordinators if threshold reached
-            // if (event.remainingCapacity() == 0) {
-            //     deliveryCoordinatorService.notifySlotFull(event.slotId());
-            // }
-
-            log.info("Successfully processed SlotBookedEvent: slotId={}", event.slotId());
+            */
 
         } catch (Exception e) {
             log.error("Error processing SlotBookedEvent: slotId={}", event.slotId(), e);

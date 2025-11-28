@@ -20,9 +20,9 @@ public class BookingConfig {
     }
 
     @Bean
-    public BookingValidator bookingValidator(
-            @Value("${delivery.booking.max-active-per-user:3}") int maxActivePerUser) {
-        return new BookingValidator(maxActivePerUser);
+    public BookingValidator bookingValidator() {
+        // BookingValidator doesn't have constructor parameters in the new architecture
+        return new BookingValidator();
     }
 
     @Bean

@@ -9,3 +9,7 @@ databaseChangeLog:
       file: db/changelog/changes/004-create-indexes.yaml
   - include:
       file: db/changelog/changes/005-create-refresh-tokens-table.yaml
+  - include:
+      file: db/changelog/changes/006-add-booking-date-time.yaml
+  - include:
+      file: db/changelog/changes/007-update-slots-to-templates.yaml

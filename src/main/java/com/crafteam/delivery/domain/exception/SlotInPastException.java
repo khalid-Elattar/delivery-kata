@@ -1,21 +1,11 @@
 package com.crafteam.delivery.domain.exception;
 
-import java.time.LocalDateTime;
-import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
-/**
- * Exception thrown when trying to book a slot that is in the past.
- */
 public class SlotInPastException extends BookingValidationException {
-
-    public SlotInPastException(LocalDateTime slotDateTime, LocalDateTime currentTime) {
-        super(
-                "SLOT_IN_PAST",
-                "Impossible de réserver un créneau dans le passé",
-                Map.of(
-                        "requestedSlotTime", slotDateTime.toString(),
-                        "currentTime", currentTime.toString()
-                )
-        );
+    public SlotInPastException(LocalDate date, LocalTime time) {
+        super("SLOT_IN_PAST",
+                String.format("Cannot book slot in the past: %s %s", date, time));
     }
 }

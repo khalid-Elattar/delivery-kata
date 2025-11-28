@@ -11,6 +11,7 @@ import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 
 /**
  * Adapter implementing SlotRepository port using R2DBC.
@@ -33,20 +34,8 @@ public class SlotRepositoryAdapter implements SlotRepository {
     }
 
     @Override
-    public Flux<Slot> findByDeliveryModeAndDate(DeliveryMode mode, LocalDate date) {
-        return r2dbcRepository.findByDeliveryModeAndDate(mode.name(), date)
-                .map(mapper::toDomain);
-    }
-
-    @Override
-    public Flux<Slot> findAvailableByDeliveryModeAndDate(DeliveryMode mode, LocalDate date) {
-        return r2dbcRepository.findAvailableByDeliveryModeAndDate(mode.name(), date)
-                .map(mapper::toDomain);
-    }
-
-    @Override
-    public Flux<Slot> findByDateRange(LocalDate startDate, LocalDate endDate) {
-        return r2dbcRepository.findByDateBetween(startDate, endDate)
+    public Mono<Slot> findByDeliveryMode(DeliveryMode mode) {
+        return r2dbcRepository.findByDeliveryMode(mode.name())
                 .map(mapper::toDomain);
     }
 

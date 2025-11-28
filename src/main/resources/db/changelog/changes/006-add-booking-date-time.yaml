@@ -1,0 +1,18 @@
+databaseChangeLog:
+  - changeSet:
+      id: 006-add-booking-date-time
+      author: crafteam
+      comments: >
+        Add booking_date and booking_time columns to bookings table.
+        These columns store the actual date and time of the booking,
+        complementing the slot reference.
+      changes:
+        - addColumn:
+            tableName: bookings
+            columns:
+              - column:
+                  name: booking_date
+                  type: date
+              - column:
+                  name: booking_time
+                  type: time

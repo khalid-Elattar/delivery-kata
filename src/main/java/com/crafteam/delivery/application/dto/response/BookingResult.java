@@ -36,16 +36,16 @@ public record BookingResult(
     /**
      * Creates a successful booking result.
      */
-    public static BookingResult confirmed(Booking booking, Slot slot) {
+    public static BookingResult confirmed(Booking booking, Slot slotTemplate) {
         Objects.requireNonNull(booking, "Booking is required");
-        Objects.requireNonNull(slot, "Slot is required");
+        Objects.requireNonNull(slotTemplate, "Slot template is required");
 
         return new BookingResult(
                 BookingResultStatus.CONFIRMED,
                 booking,
-                RequestedSlotInfo.from(slot, null),
+                RequestedSlotInfo.from(slotTemplate, booking.getBookingDate(), booking.getBookingTime(), null),
                 List.of(),
-                RulesInfo.from(slot.getDeliveryMode()),
+                RulesInfo.from(slotTemplate.getDeliveryMode()),
                 "Réservation confirmée",
                 null,
                 List.of()
@@ -54,7 +54,14 @@ public record BookingResult(
 
     /**
      * Creates a result for unavailable slot with suggestions.
+     *
+     * TODO: DISABLED - Needs rewrite for new Slot architecture
+     * This method is commented out because:
+     * 1. SlotSuggestion uses old Slot API
+     * 2. SuggestionInfo.from() is disabled
+     * 3. Entire suggestion system needs redesign
      */
+    /*
     public static BookingResult unavailableWithSuggestions(
             Slot requestedSlot,
             List<SlotSuggestion> suggestions,
@@ -78,10 +85,15 @@ public record BookingResult(
                 List.of()
         );
     }
+    */
 
     /**
      * Creates a result when no alternatives are available.
+     *
+     * TODO: DISABLED - Needs rewrite for new Slot architecture
+     * This method needs: (Slot template, LocalDate, LocalTime, unavailabilityReason, reasons, recommendation)
      */
+    /*
     public static BookingResult noAlternatives(
             Slot requestedSlot,
             String unavailabilityReason,
@@ -101,10 +113,15 @@ public record BookingResult(
                 reasons != null ? reasons : List.of()
         );
     }
+    */
 
     /**
      * Creates a result when user has reached max bookings.
+     *
+     * TODO: DISABLED - Needs rewrite for new Slot architecture
+     * This method needs: (Slot template, LocalDate, LocalTime, currentBookings, maxBookings)
      */
+    /*
     public static BookingResult maxBookingsReached(
             Slot requestedSlot,
             int currentBookings,
@@ -123,6 +140,7 @@ public record BookingResult(
                 List.of("Nombre de réservations actives : %d/%d".formatted(currentBookings, maxBookings))
         );
     }
+    */
 
     /**
      * Checks if the booking was successful.
@@ -158,12 +176,30 @@ public record BookingResult(
             LocalTime endTime,
             String reason
     ) {
+        // TODO: DISABLED - Needs rewrite for new Slot architecture
+        // Old Slot had: getDate(), getTimeSlot()
+        // New Slot is a template with: availableDays, startTime, endTime, slotDuration
+        // This factory method should take: (Slot template, LocalDate, LocalTime, reason)
+        // For now, create RequestedSlotInfo directly from booking data instead
+        /*
         public static RequestedSlotInfo from(Slot slot, String reason) {
             return new RequestedSlotInfo(
                     slot.getId().value().toString(),
                     slot.getDate(),
                     slot.getTimeSlot().startTime(),
                     slot.getTimeSlot().endTime(),
+                    reason
+            );
+        }
+        */
+
+        public static RequestedSlotInfo from(Slot slotTemplate, LocalDate date, LocalTime startTime, String reason) {
+            LocalTime endTime = slotTemplate.calculateEndTime(startTime);
+            return new RequestedSlotInfo(
+                    slotTemplate.getId().value().toString(),
+                    date,
+                    startTime,
+                    endTime,
                     reason
             );
         }
@@ -183,6 +219,10 @@ public record BookingResult(
             LocalDateTime validUntil,
             RulesValidation rulesValidation
     ) {
+        // TODO: DISABLED - Needs rewrite for new Slot architecture
+        // SlotSuggestion is also using old Slot API (slot.getDate(), slot.getTimeSlot())
+        // This entire suggestion system needs architectural redesign
+        /*
         public static SuggestionInfo from(SlotSuggestion suggestion) {
             return new SuggestionInfo(
                     suggestion.getSlotId().value().toString(),
@@ -196,6 +236,7 @@ public record BookingResult(
                     new RulesValidation(true, true, true, true)
             );
         }
+        */
     }
 
     /**

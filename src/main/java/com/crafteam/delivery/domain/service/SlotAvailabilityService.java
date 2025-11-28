@@ -13,13 +13,20 @@ import java.util.Optional;
 /**
  * Domain service for slot availability operations.
  * Contains logic that doesn't naturally belong to a single aggregate.
+ *
+ * TODO: This entire service needs to be rebuilt to work with the new Slot template architecture.
+ * Slot is now a TEMPLATE (defines WHEN a mode is available), not a specific booking instance.
+ * All methods below assume Slot has date, timeSlot, bookedCount, isAvailable(), etc.
+ * These methods are temporarily commented out until the service is redesigned.
  */
 public class SlotAvailabilityService {
 
+    /* TODO: Rebuild this method for slot templates
     /**
      * Finds the best available slot based on criteria.
      * Prefers slots with more remaining capacity and earlier times.
      */
+    /*
     public Optional<Slot> findBestAvailableSlot(List<Slot> slots, DeliveryMode preferredMode) {
         return slots.stream()
                 .filter(Slot::isAvailable)
@@ -27,10 +34,13 @@ public class SlotAvailabilityService {
                 .max(Comparator.comparingInt(Slot::remainingCapacity)
                         .thenComparing(slot -> slot.getTimeSlot().startTime(), Comparator.reverseOrder()));
     }
+    */
 
+    /* TODO: Rebuild this method for slot templates
     /**
      * Finds available slots within a time range.
      */
+    /*
     public List<Slot> findSlotsInTimeRange(List<Slot> slots, LocalTime startTime, LocalTime endTime) {
         TimeSlot searchRange = new TimeSlot(startTime, endTime);
 
@@ -40,10 +50,13 @@ public class SlotAvailabilityService {
                 .sorted(Comparator.comparing(slot -> slot.getTimeSlot().startTime()))
                 .toList();
     }
+    */
 
+    /* TODO: Rebuild this method for slot templates
     /**
      * Checks if a slot transfer is valid.
      */
+    /*
     public boolean canTransferBooking(Slot sourceSlot, Slot targetSlot) {
         if (!targetSlot.isAvailable()) {
             return false;
@@ -61,10 +74,13 @@ public class SlotAvailabilityService {
 
         return true;
     }
+    */
 
+    /* TODO: Rebuild this method for slot templates
     /**
      * Calculates the total available capacity for a given date and mode.
      */
+    /*
     public int calculateTotalAvailableCapacity(List<Slot> slots, LocalDate date, DeliveryMode mode) {
         return slots.stream()
                 .filter(slot -> slot.getDate().equals(date))
@@ -72,10 +88,13 @@ public class SlotAvailabilityService {
                 .mapToInt(Slot::remainingCapacity)
                 .sum();
     }
+    */
 
+    /* TODO: Rebuild this method for slot templates
     /**
      * Finds all slots for a specific date sorted by start time.
      */
+    /*
     public List<Slot> findSlotsByDate(List<Slot> slots, LocalDate date) {
         return slots.stream()
                 .filter(slot -> slot.getDate().equals(date))
@@ -83,4 +102,5 @@ public class SlotAvailabilityService {
                 .sorted(Comparator.comparing(slot -> slot.getTimeSlot().startTime()))
                 .toList();
     }
+    */
 }

@@ -54,15 +54,13 @@ public class JwtAuthenticationWebFilter implements WebFilter {
                             .flatMap(userId ->
                                     userRepository.findById(UserId.from(userId))
                                             .flatMap(user -> {
-                                                List<SimpleGrantedAuthority> authorities = List.of(
-                                                        new SimpleGrantedAuthority("ROLE_" + user.getRole().name())
-                                                );
+                                                CustomUserDetails userDetails = new CustomUserDetails(user);
 
                                                 UsernamePasswordAuthenticationToken authentication =
                                                         new UsernamePasswordAuthenticationToken(
-                                                                user.getEmail().value(),
+                                                                userDetails,
                                                                 null,
-                                                                authorities
+                                                                userDetails.getAuthorities()
                                                         );
 
                                                 return chain.filter(exchange)

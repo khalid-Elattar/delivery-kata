@@ -81,6 +81,11 @@ public class SlotSuggestionService {
             return Collections.emptyList();
         }
 
+        // TODO: Rebuild - isValidSuggestion always returns false now
+        // Need to rebuild the entire suggestion logic for slot templates
+        return Collections.emptyList();
+
+        /* OLD CODE
         return candidateSlots.stream()
                 // Exclude the requested slot itself
                 .filter(slot -> !slot.getId().equals(requestedSlot.getId()))
@@ -93,6 +98,7 @@ public class SlotSuggestionService {
                 // Limit results
                 .limit(maxSuggestions)
                 .toList();
+        */
     }
 
     /**
@@ -109,6 +115,7 @@ public class SlotSuggestionService {
 
     /**
      * Validates if a slot is a valid suggestion according to all business rules.
+     * TODO: Rebuild for slot templates - slot.getDate(), slot.getTimeSlot() no longer exist
      */
     private boolean isValidSuggestion(
             Slot slot,
@@ -119,6 +126,10 @@ public class SlotSuggestionService {
             LocalDate today,
             LocalTime currentTime) {
 
+        // TODO: Rebuild - all the methods below use old Slot API
+        return false;
+
+        /* OLD CODE
         // Rule 1: Slot must have available capacity
         if (!slot.isAvailable()) {
             return false;
@@ -171,6 +182,7 @@ public class SlotSuggestionService {
         }
 
         return true;
+        */
     }
 
     /**
